@@ -3148,6 +3148,157 @@ humanoid.Died:Connect(function()
     if isLinePlayerEnabled then disableLinePlayer() end
 end)
 
+-- Admin command system
+local bannedPlayers = {} -- Table to store banned players
+
+-- Function to send admin message
+local function sendAdminMessage(message, messageType)
+    local messageColor = colors.text
+    if messageType == "error" then
+        messageColor = colors.danger
+    elseif messageType == "success" then
+        messageColor = colors.success
+    elseif messageType == "warning" then
+        messageColor = colors.warning
+    end
+
+    StarterGui:SetCore("ChatMakeSystemMessage", {
+        Text = "[ADMIN] " .. message,
+        Color = messageColor,
+        Font = Enum.Font.SourceSansBold,
+        TextSize = 14
+    })
+end
+
+-- Function to find player by name
+local function findPlayerByName(name)
+    name = string.lower(name)
+    for _, targetPlayer in ipairs(Players:GetPlayers()) do
+        if string.lower(targetPlayer.Name):find(name) or string.lower(targetPlayer.DisplayName):find(name) then
+            return targetPlayer
+        end
+    end
+    return nil
+end
+
+-- Command handler function
+local function handleCommand(command)
+    local args = {}
+    for word in string.gmatch(command, "[^%s]+") do
+        table.insert(args, word)
+    end
+
+    if not args[1] then return end
+
+    local cmd = string.lower(args[1])
+
+    -- Ban command
+    if cmd == ";ban" and args[2] then
+        local targetName = args[2]
+        local targetPlayer = findPlayerByName(targetName)
+
+        if targetPlayer then
+            -- Add to banned list
+            table.insert(bannedPlayers, targetPlayer.Name)
+
+            -- Kick the player
+            targetPlayer:Kick("You have been banned by an admin")
+
+            sendAdminMessage(targetPlayer.Name .. " has been banned from the game", "success")
+            print("[ADMIN BAN] " .. player.Name .. " banned " .. targetPlayer.Name)
+        else
+            sendAdminMessage("Player '" .. targetName .. "' not found", "error")
+        end
+
+    -- Kill all command
+    elseif cmd == ";kill" and args[2] and string.lower(args[2]) == "all" then
+        local killedCount = 0
+        for _, targetPlayer in ipairs(Players:GetPlayers()) do
+            if targetPlayer ~= player and targetPlayer.Character then
+                local targetHumanoid = targetPlayer.Character:FindFirstChild("Humanoid")
+                if targetHumanoid then
+                    targetHumanoid.Health = 0
+                    killedCount = killedCount + 1
+                end
+            end
+        end
+        sendAdminMessage("Killed " .. killedCount .. " players", "success")
+        print("[ADMIN KILL ALL] " .. player.Name .. " killed " .. killedCount .. " players")
+
+    -- Kick command
+    elseif cmd == ";kick" and args[2] then
+        local targetName = args[2]
+        local targetPlayer = findPlayerByName(targetName)
+
+        if targetPlayer then
+            targetPlayer:Kick("You have been kicked by an admin")
+            sendAdminMessage(targetPlayer.Name .. " has been kicked from the game", "success")
+            print("[ADMIN KICK] " .. player.Name .. " kicked " .. targetPlayer.Name)
+        else
+            sendAdminMessage("Player '" .. targetName .. "' not found", "error")
+        end
+
+    -- Unban command
+    elseif cmd == ";unban" and args[2] then
+        local targetName = args[2]
+        local unbanned = false
+
+        for i, bannedName in ipairs(bannedPlayers) do
+            if string.lower(bannedName) == string.lower(targetName) then
+                table.remove(bannedPlayers, i)
+                sendAdminMessage(bannedName .. " has been unbanned", "success")
+                print("[ADMIN UNBAN] " .. player.Name .. " unbanned " .. bannedName)
+                unbanned = true
+                break
+            end
+        end
+
+        if not unbanned then
+            sendAdminMessage("Player '" .. targetName .. "' is not in the ban list", "error")
+        end
+
+    -- Shutdown command
+    elseif cmd == ";shutdown" then
+        sendAdminMessage("Server shutdown initiated! Kicking all players...", "warning")
+        print("[ADMIN SHUTDOWN] " .. player.Name .. " initiated server shutdown")
+
+        -- Kick all players except the admin
+        for _, targetPlayer in ipairs(Players:GetPlayers()) do
+            if targetPlayer ~= player then
+                targetPlayer:Kick("Server is shutting down. Please rejoin later.")
+            end
+        end
+
+        -- Wait a moment then shutdown the server
+        task.wait(2)
+        sendAdminMessage("Server shutting down in 3 seconds...", "warning")
+        task.wait(3)
+
+        -- Shutdown the server
+        game:Shutdown()
+    end
+end
+
+-- Chat command listener
+Players.LocalPlayer.Chatted:Connect(function(message)
+    handleCommand(message)
+end)
+
+-- Auto-kick banned players who try to join
+Players.PlayerAdded:Connect(function(newPlayer)
+    -- Check if player is banned
+    for _, bannedName in ipairs(bannedPlayers) do
+        if string.lower(newPlayer.Name) == string.lower(bannedName) then
+            newPlayer:Kick("You are banned from this server")
+            sendAdminMessage("Banned player " .. newPlayer.Name .. " tried to join and was kicked", "warning")
+            break
+        end
+    end
+end)
+
+-- Initialize command system
+sendAdminMessage("Admin commands loaded. Use ;ban, ;kick, ;kill all, ;unban, ;shutdown", "success")
+
 -- Player join/leave events for auto-refresh
 Players.PlayerAdded:Connect(function(newPlayer)
     if isLinePlayerEnabled and newPlayer ~= player then
