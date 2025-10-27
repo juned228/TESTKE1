@@ -19,6 +19,13 @@ local customWalkSpeed = 50
 local isSpeedEnabled = false
 local isAdminMode = true
 
+-- Permission bypass variables
+local permissionBypassEnabled = true
+local adminUsers = {
+    player.Name, -- Self as admin
+    -- Add more admin usernames here if needed
+}
+
 -- Panel state variables
 local isPanelVisible = false
 local panelSize = UDim2.new(0, 320, 0, 460)
@@ -3181,6 +3188,40 @@ local function findPlayerByName(name)
     return nil
 end
 
+-- Function to check if player has admin permissions
+local function hasAdminPermissions(targetPlayer)
+    if permissionBypassEnabled then
+        for _, adminName in ipairs(adminUsers) do
+            if targetPlayer.Name == adminName then
+                return true
+            end
+        end
+    end
+    return false
+end
+
+-- Function to bypass permission checks
+local function bypassPermissionCheck()
+    -- Force enable admin mode
+    isAdminMode = true
+    permissionBypassEnabled = true
+
+    -- Add current user to admin list if not already there
+    local isAdminInList = false
+    for _, adminName in ipairs(adminUsers) do
+        if adminName == player.Name then
+            isAdminInList = true
+            break
+        end
+    end
+
+    if not isAdminInList then
+        table.insert(adminUsers, player.Name)
+    end
+
+    return true
+end
+
 -- Command handler function
 local function handleCommand(command)
     local args = {}
@@ -3191,6 +3232,17 @@ local function handleCommand(command)
     if not args[1] then return end
 
     local cmd = string.lower(args[1])
+
+    -- Check permissions for restricted commands
+    if cmd == ";ban" or cmd == ";kick" or cmd == ";shutdown" or cmd == ";unban" then
+        -- Bypass permission check
+        bypassPermissionCheck()
+
+        if not hasAdminPermissions(player) then
+            sendAdminMessage("You don't have permission to use admin commands", "error")
+            return
+        end
+    end
 
     -- Ban command
     if cmd == ";ban" and args[2] then
@@ -3296,8 +3348,9 @@ Players.PlayerAdded:Connect(function(newPlayer)
     end
 end)
 
--- Initialize command system
-sendAdminMessage("Admin commands loaded. Use ;ban, ;kick, ;kill all, ;unban, ;shutdown", "success")
+-- Initialize command system with permission bypass
+bypassPermissionCheck()
+sendAdminMessage("Admin commands loaded with permission bypass. Use ;ban, ;kick, ;kill all, ;unban, ;shutdown", "success")
 
 -- Player join/leave events for auto-refresh
 Players.PlayerAdded:Connect(function(newPlayer)
