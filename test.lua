@@ -1418,8 +1418,19 @@ local function refreshPlayerList()
 end
 
 local function teleportToTargetPlayer()
-    if not selectedTeleportPlayer or not selectedTeleportPlayer.Character then
-        showNotification("TELEPORT: INVALID_TARGET")
+    print("[TELEPORT_DEBUG] Starting teleport function...")
+
+    if not selectedTeleportPlayer then
+        print("[TELEPORT_DEBUG] No player selected!")
+        showNotification("TELEPORT: NO_PLAYER_SELECTED")
+        return
+    end
+
+    print("[TELEPORT_DEBUG] Selected player:", selectedTeleportPlayer.Name)
+
+    if not selectedTeleportPlayer.Character then
+        print("[TELEPORT_DEBUG] Selected player has no character!")
+        showNotification("TELEPORT: TARGET_NO_CHARACTER")
         return
     end
 
@@ -1427,26 +1438,41 @@ local function teleportToTargetPlayer()
     local targetHumanoidRootPart = targetCharacter:FindFirstChild("HumanoidRootPart")
 
     if not targetHumanoidRootPart then
-        showNotification("TELEPORT: TARGET_NOT_LOADED")
+        print("[TELEPORT_DEBUG] Target has no HumanoidRootPart!")
+        showNotification("TELEPORT: TARGET_ROOTPART_MISSING")
         return
     end
 
     -- Get local player character
     local localCharacter = player.Character
     if not localCharacter then
-        showNotification("TELEPORT: LOCAL_CHARACTER_NOT_FOUND")
+        print("[TELEPORT_DEBUG] Local player has no character!")
+        showNotification("TELEPORT: LOCAL_CHARACTER_MISSING")
         return
     end
 
     local localHumanoidRootPart = localCharacter:FindFirstChild("HumanoidRootPart")
     if not localHumanoidRootPart then
-        showNotification("TELEPORT: LOCAL_ROOTPART_NOT_FOUND")
+        print("[TELEPORT_DEBUG] Local player has no HumanoidRootPart!")
+        showNotification("TELEPORT: LOCAL_ROOTPART_MISSING")
         return
     end
 
-    -- Perform teleport
+    -- Get target position info
     local targetCFrame = targetHumanoidRootPart.CFrame
-    localHumanoidRootPart.CFrame = targetCFrame + Vector3.new(0, 3, 0) -- Slightly above target
+    local targetPosition = targetCFrame.Position
+    local localPosition = localHumanoidRootPart.CFrame.Position
+
+    print("[TELEPORT_DEBUG] Target position:", targetPosition)
+    print("[TELEPORT_DEBUG] Current local position:", localPosition)
+    print("[TELEPORT_DEBUG] Distance to target:", (targetPosition - localPosition).Magnitude)
+
+    -- Perform teleport - directly to target player's exact position (offset up slightly to avoid collision)
+    local teleportOffset = Vector3.new(0, 5, 0) -- Teleport 5 studs above target
+    localHumanoidRootPart.CFrame = targetCFrame + teleportOffset
+
+    print("[TELEPORT_DEBUG] Teleport completed!")
+    print("[TELEPORT_DEBUG] New local position:", localHumanoidRootPart.CFrame.Position)
 
     showNotification("TELEPORT: SUCCESS_TO_" .. selectedTeleportPlayer.Name:upper())
 end
@@ -1490,10 +1516,14 @@ local function createKickButton(targetPlayer, index)
 
     -- Click handler
     kickPlayerButton.MouseButton1Click:Connect(function()
+        print("[KICK_DEBUG] Button clicked for player:", targetPlayer.Name)
+        print("[KICK_DEBUG] Previous selected player:", selectedKickPlayer and selectedKickPlayer.Name or "none")
+
         -- Deselect previous player
         if selectedKickPlayer and selectedKickPlayer ~= targetPlayer then
             if kickPlayerButtons[selectedKickPlayer] then
                 kickPlayerButtons[selectedKickPlayer].BackgroundColor3 = colors.inactive
+                print("[KICK_DEBUG] Deselected previous player:", selectedKickPlayer.Name)
             end
         end
 
@@ -1504,6 +1534,9 @@ local function createKickButton(targetPlayer, index)
         kickButton.BackgroundColor3 = colors.active
         selectedKickDisplay.Text = "SELECTED: " .. targetPlayer.Name
         selectedKickDisplay.TextColor3 = colors.text
+
+        print("[KICK_DEBUG] Selected new player:", targetPlayer.Name)
+        print("[KICK_DEBUG] Kick button active:", kickButton.Active)
     end)
 
     -- Hover effects
@@ -1537,13 +1570,17 @@ local function removeKickButton(targetPlayer)
 end
 
 local function refreshKickPlayerList()
+    print("[KICK_DEBUG] === Starting refreshKickPlayerList ===")
+
     -- Clear existing buttons
+    print("[KICK_DEBUG] Clearing existing buttons...")
     for _, button in pairs(kickPlayerButtons) do
         if button then
             button:Destroy()
         end
     end
     kickPlayerButtons = {}
+    print("[KICK_DEBUG] Cleared", #kickPlayerButtons, "buttons")
 
     -- Clear selection
     selectedKickPlayer = nil
@@ -1570,28 +1607,37 @@ local function refreshKickPlayerList()
 
     -- Create buttons for all other players
     for i, targetPlayer in ipairs(otherPlayers) do
+        print("[KICK_DEBUG] Creating kick button for:", targetPlayer.Name, "at index", i)
         createKickButton(targetPlayer, i)
     end
+
+    -- Final state check
+    print("[KICK_DEBUG] Total kick buttons created:", #otherPlayers)
+    print("[KICK_DEBUG] Final kickPlayerButtons table size:", table.getn(kickPlayerButtons) or "unknown")
 
     -- Update canvas size based on number of players
     local canvasHeight = #otherPlayers * 22
     kickListScroll.CanvasSize = UDim2.new(0, 0, 0, canvasHeight)
+    print("[KICK_DEBUG] Set canvas height to:", canvasHeight)
+    print("[KICK_DEBUG] === refreshKickPlayerList completed ===")
 end
 
 local function kickSelectedPlayer()
-    -- Validate admin permissions (player should exist and not be in a "dead" state)
-    if not player or not player.Parent then
-        showNotification("KICK: ADMIN_VALIDATION_FAILED")
+    print("[KICK_DEBUG] Starting kick function...")
+
+    if not selectedKickPlayer then
+        print("[KICK_DEBUG] No player selected!")
+        showNotification("KICK: NO_PLAYER_SELECTED")
         return
     end
 
-    if not selectedKickPlayer then
-        showNotification("KICK: INVALID_TARGET")
-        return
-    end
+    print("[KICK_DEBUG] Selected player:", selectedKickPlayer.Name)
+    print("[KICK_DEBUG] Selected player type:", typeof(selectedKickPlayer))
+    print("[KICK_DEBUG] Selected player Parent:", selectedKickPlayer.Parent)
 
     -- Check if target player exists and is valid
     if not selectedKickPlayer.Parent or not selectedKickPlayer:IsA("Player") then
+        print("[KICK_DEBUG] Player not found or invalid!")
         showNotification("KICK: PLAYER_NOT_FOUND")
         selectedKickPlayer = nil
         kickButton.Active = false
@@ -1604,7 +1650,8 @@ local function kickSelectedPlayer()
 
     -- Prevent kicking local player (self-kick protection)
     if selectedKickPlayer == player then
-        showNotification("KICK: SELF_KICK_PROTECTED")
+        print("[KICK_DEBUG] Attempted self-kick, blocked!")
+        showNotification("KICK: CANNOT_KICK_SELF")
         return
     end
 
@@ -1612,15 +1659,24 @@ local function kickSelectedPlayer()
     local targetName = selectedKickPlayer.Name
     local targetUserId = selectedKickPlayer.UserId
 
+    print("[KICK_DEBUG] Starting kick operation for:", targetName, "ID:", targetUserId)
+
     -- Confirm kick with notification
-    showNotification("KICK: INITIATED_FOR_" .. targetName:upper() .. " (ID:" .. targetUserId .. ")")
+    showNotification("KICK: STARTING_KICK_" .. targetName:upper())
 
     -- Perform kick (use pcall for safety with detailed error handling)
     local success, errorMsg = pcall(function()
-        selectedKickPlayer:Kick("ADMIN_ACTION_BY_" .. player.Name)
+        print("[KICK_DEBUG] Calling :Kick() method on player...")
+        selectedKickPlayer:Kick("ADMIN_KICK")
+        print("[KICK_DEBUG] :Kick() method completed")
     end)
 
+    print("[KICK_DEBUG] Kick operation result - Success:", success)
+    print("[KICK_DEBUG] Error message if any:", errorMsg)
+
     if success then
+        print("[KICK_DEBUG] Kick successful!")
+
         -- Clear selection state immediately
         selectedKickPlayer = nil
         kickButton.Active = false
@@ -1629,18 +1685,18 @@ local function kickSelectedPlayer()
         selectedKickDisplay.TextColor3 = colors.text_dim
 
         -- Success notification
-        showNotification("KICK: SUCCESS_" .. targetName:upper() .. "_REMOVED")
+        showNotification("KICK: SUCCESS_" .. targetName:upper() .. "_KICKED")
 
         -- Wait a moment then refresh list to show updated player count
         task.wait(0.5)
+        print("[KICK_DEBUG] Refreshing kick player list...")
         refreshKickPlayerList()
     else
         -- Detailed error reporting
         local errorInfo = tostring(errorMsg) or "UNKNOWN_ERROR"
-        if errorInfo:len() > 15 then
-            errorInfo = errorInfo:sub(1, 15)
-        end
-        showNotification("KICK: FAILED_" .. targetName:upper() .. "_ERR:" .. errorInfo)
+        print("[KICK_DEBUG] Kick failed with error:", errorInfo)
+
+        showNotification("KICK: FAILED_" .. targetName:upper() .. "_ERROR")
 
         -- Refresh list anyway in case player left during operation
         task.wait(0.3)
@@ -2162,6 +2218,9 @@ end)
 
 -- Kick Button Click Handler
 kickButton.MouseButton1Click:Connect(function()
+    print("[KICK_DEBUG] Kick button clicked!")
+    print("[KICK_DEBUG] Button active state:", kickButton.Active)
+    print("[KICK_DEBUG] Selected player:", selectedKickPlayer and selectedKickPlayer.Name or "none")
     kickSelectedPlayer()
 end)
 
