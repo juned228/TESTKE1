@@ -57,6 +57,31 @@ local carryPlayerButtons = {}
 local isCarryModeActive = false
 local carryConnections = {}  -- Untuk menyimpan heartbeat connections
 local carryOffset = Vector3.new(3, 5, 3)  -- Offset posisi carry relatif terhadap admin
+local currentCarryStyle = "Normal"  -- Default carry style
+local carriedPlayers = {}  -- Players currently being carried
+local carryStyles = {
+    Normal = {
+        DisplayName = "Gendong Biasa",
+        Offset = Vector3.new(3, 5, 3),
+        Radius = 5,
+        Animation = "Carry",
+        AllowControl = false
+    },
+    Drag = {
+        DisplayName = "Seret",
+        Offset = Vector3.new(0, 2, 0),
+        Radius = 3,
+        Animation = "Drag",
+        AllowControl = false
+    },
+    Push = {
+        DisplayName = "Dorong",
+        Offset = Vector3.new(0, 3, -4),
+        Radius = 2,
+        Animation = "Push",
+        AllowControl = true
+    }
+}
 
 -- Category collapse state variables
 local isMainCategoryCollapsed = false
@@ -71,7 +96,10 @@ local colors = {
     text = Color3.fromRGB(255, 255, 255),
     text_dim = Color3.fromRGB(180, 180, 180),
     active = Color3.fromRGB(100, 100, 100),
-    inactive = Color3.fromRGB(40, 40, 40)
+    inactive = Color3.fromRGB(40, 40, 40),
+    danger = Color3.fromRGB(255, 0, 0),
+    success = Color3.fromRGB(0, 255, 0),
+    warning = Color3.fromRGB(255, 165, 0)
 }
 
 -- Create Minimal GUI
@@ -1847,12 +1875,347 @@ local function updateCustomSpeed(newSpeed)
     end
 end
 
-local function showNotification(message)
+local function showNotification(message, notificationType)
+    notificationType = notificationType or "Info"
+    local iconMap = {
+        Info = "rbxassetid://2544403653",
+        Success = "rbxassetid://6031068421",
+        Danger = "rbxassetid://6031068428",
+        Warning = "rbxassetid://6031068426"
+    }
+
+    -- Use chat for system messages (more reliable)
     StarterGui:SetCore("ChatMakeSystemMessage", {
         Text = "[SYSTEM] " .. message;
-        Color = colors.text;
+        Color = notificationType == "Success" and Color3.fromRGB(0, 255, 0) or
+               notificationType == "Danger" and Color3.fromRGB(255, 0, 0) or
+               notificationType == "Warning" and Color3.fromRGB(255, 165, 0) or
+               colors.text;
         Font = Enum.Font.Code;
+        FontSize = Enum.FontSize.Size18;
     })
+
+    -- Also show notification
+    StarterGui:SetCore("SendNotification", {
+        Title = "JUNED SYSTEM",
+        Text = message,
+        Duration = 3,
+        Icon = iconMap[notificationType] or iconMap.Info
+    })
+end
+
+-- Create temporary notification GUI for special cases
+local function createTempNotification(message, notificationType, callback)
+    notificationType = notificationType or "Info"
+
+    -- Remove existing temp notification
+    local existingGui = player.PlayerGui:FindFirstChild("TempNotificationGui")
+    if existingGui then
+        existingGui:Destroy()
+    end
+
+    -- Create notification GUI
+    local notificationGui = Instance.new("ScreenGui")
+    notificationGui.Name = "TempNotificationGui"
+    notificationGui.Parent = player.PlayerGui
+    notificationGui.IgnoreGuiInset = true
+    notificationGui.ResetOnSpawn = false
+
+    -- Main frame
+    local mainFrame = Instance.new("Frame")
+    mainFrame.Name = "NotificationFrame"
+    mainFrame.Parent = notificationGui
+    mainFrame.Size = UDim2.new(0, 350, 0, 50)
+    mainFrame.Position = UDim2.new(0.5, 0, 0, -60)
+    mainFrame.AnchorPoint = Vector2.new(0.5, 0)
+    mainFrame.BackgroundColor3 = notificationType == "Success" and Color3.fromRGB(0, 255, 0) or
+                                  notificationType == "Danger" and Color3.fromRGB(255, 0, 0) or
+                                  notificationType == "Warning" and Color3.fromRGB(255, 165, 0) or
+                                  colors.secondary
+    mainFrame.BorderSizePixel = 0
+
+    -- Corner
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 10)
+    corner.Parent = mainFrame
+
+    -- Text label
+    local textLabel = Instance.new("TextLabel")
+    textLabel.Name = "NotificationText"
+    textLabel.Parent = mainFrame
+    textLabel.Size = UDim2.new(1, -20, 1, 0)
+    textLabel.Position = UDim2.new(0, 10, 0, 0)
+    textLabel.BackgroundTransparency = 1
+    textLabel.Text = message
+    textLabel.TextColor3 = Color3.new(1, 1, 1)
+    textLabel.TextScaled = true
+    textLabel.Font = Enum.Font.SourceSansBold
+
+    -- Animate in
+    local tweenIn = TweenService:Create(mainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back), {
+        Position = UDim2.new(0.5, 0, 0, 20)
+    })
+    tweenIn:Play()
+
+    -- Auto remove after 5 seconds
+    task.delay(5, function()
+        if notificationGui and notificationGui.Parent then
+            local tweenOut = TweenService:Create(mainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In), {
+                Position = UDim2.new(0.5, 0, 0, -60)
+            })
+            tweenOut:Play()
+            tweenOut.Completed:Connect(function()
+                notificationGui:Destroy()
+            end)
+        end
+    end)
+
+    return notificationGui
+end
+
+-- Create stop carry GUI
+local function createStopCarryGui()
+    -- Remove existing GUI
+    local existingGui = player.PlayerGui:FindFirstChild("StopCarryGui")
+    if existingGui then
+        existingGui:Destroy()
+    end
+
+    -- Create GUI
+    local stopGui = Instance.new("ScreenGui")
+    stopGui.Name = "StopCarryGui"
+    stopGui.Parent = player.PlayerGui
+    stopGui.IgnoreGuiInset = true
+    stopGui.ResetOnSpawn = false
+
+    -- Stop button
+    local stopButton = Instance.new("TextButton")
+    stopButton.Name = "StopButton"
+    stopButton.Parent = stopGui
+    stopButton.Size = UDim2.new(0, 150, 0, 40)
+    stopButton.Position = UDim2.new(0.5, -75, 0, 10)
+    stopButton.AnchorPoint = Vector2.new(0.5, 0)
+    stopButton.BackgroundColor3 = colors.danger
+    stopButton.Text = "🛑 STOP CARRY"
+    stopButton.TextColor3 = Color3.new(1, 1, 1)
+    stopButton.Font = Enum.Font.SourceSansBold
+    stopButton.TextSize = 14
+
+    local stopCorner = Instance.new("UICorner")
+    stopCorner.CornerRadius = UDim.new(0, 8)
+    stopCorner.Parent = stopButton
+
+    -- Button click handler
+    stopButton.MouseButton1Click:Connect(function()
+        stopCarryingPlayers()
+        stopGui:Destroy()
+    end)
+
+    -- Hover effects
+    stopButton.MouseEnter:Connect(function()
+        stopButton.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
+    end)
+
+    stopButton.MouseLeave:Connect(function()
+        stopButton.BackgroundColor3 = colors.danger
+    end)
+
+    return stopGui
+end
+
+-- Add visual effects for carried players
+local function addCarryEffect(targetPlayer, carryStyle)
+    if not targetPlayer or not targetPlayer.Character then return end
+
+    local character = targetPlayer.Character
+
+    -- Remove existing effects
+    local existingEffect = character:FindFirstChild("CarryEffect")
+    if existingEffect then
+        existingEffect:Destroy()
+    end
+
+    -- Create effect based on carry style
+    local effect = Instance.new("Attachment")
+    effect.Name = "CarryEffect"
+    effect.Parent = character:FindFirstChild("HumanoidRootPart") or character.PrimaryPart
+
+    -- Add particles based on style
+    if carryStyle.Animation == "Carry" then
+        -- Floating particles for normal carry
+        local particles = Instance.new("ParticleEmitter")
+        particles.Name = "CarryParticles"
+        particles.Parent = effect
+        particles.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+        particles.Color = ColorSequence.new(Color3.new(1, 1, 1))
+        particles.Size = NumberSequence.new(0.2)
+        particles.Lifetime = NumberRange.new(1, 2)
+        particles.Rate = 5
+        particles.Speed = NumberRange.new(0.5, 1)
+        particles.Drag = 0.5
+        particles.Enabled = true
+
+    elseif carryStyle.Animation == "Drag" then
+        -- Dark particles for drag style
+        local particles = Instance.new("ParticleEmitter")
+        particles.Name = "DragParticles"
+        particles.Parent = effect
+        particles.Texture = "rbxasset://textures/particles/smoke_main.dds"
+        particles.Color = ColorSequence.new(Color3.new(0.3, 0.3, 0.3))
+        particles.Size = NumberSequence.new(0.5)
+        particles.Lifetime = NumberRange.new(2, 3)
+        particles.Rate = 10
+        particles.Speed = NumberRange.new(0, 0.5)
+        particles.Drag = 1
+        particles.Enabled = true
+
+    elseif carryStyle.Animation == "Push" then
+        -- Force-like particles for push style
+        local particles = Instance.new("ParticleEmitter")
+        particles.Name = "PushParticles"
+        particles.Parent = effect
+        particles.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+        particles.Color = ColorSequence.new(Color3.fromRGB(0, 150, 255))
+        particles.Size = NumberSequence.new(0.3)
+        particles.Lifetime = NumberRange.new(0.5, 1)
+        particles.Rate = 15
+        particles.Speed = NumberRange.new(2, 4)
+        particles.Drag = 0.2
+        particles.Enabled = true
+    end
+
+    -- Add light effect
+    local light = Instance.new("PointLight")
+    light.Name = "CarryLight"
+    light.Parent = effect
+    light.Color = carryStyle.Animation == "Carry" and Color3.new(1, 1, 0.5) or
+                    carryStyle.Animation == "Drag" and Color3.new(0.5, 0.5, 0.5) or
+                    Color3.new(0.5, 0.8, 1)
+    light.Range = 8
+    light.Brightness = 0.3
+end
+
+-- Remove carry effects
+local function removeCarryEffect(targetPlayer)
+    if not targetPlayer or not targetPlayer.Character then return end
+
+    local carryEffect = targetPlayer.Character:FindFirstChild("CarryEffect")
+    if carryEffect then
+        carryEffect:Destroy()
+    end
+end
+
+-- Create carry style selection menu
+local function createCarryStyleMenu(targetPlayer)
+    -- Remove existing menu
+    local existingMenu = player.PlayerGui:FindFirstChild("CarryStyleMenu")
+    if existingMenu then
+        existingMenu:Destroy()
+    end
+
+    -- Create menu GUI
+    local menuGui = Instance.new("ScreenGui")
+    menuGui.Name = "CarryStyleMenu"
+    menuGui.Parent = player.PlayerGui
+    menuGui.IgnoreGuiInset = true
+    menuGui.ResetOnSpawn = false
+
+    -- Main frame
+    local mainFrame = Instance.new("Frame")
+    mainFrame.Name = "MenuFrame"
+    mainFrame.Parent = menuGui
+    mainFrame.Size = UDim2.new(0, 250, 0, 200)
+    mainFrame.Position = UDim2.new(0.5, -125, 0.5, -100)
+    mainFrame.BackgroundColor3 = colors.secondary
+    mainFrame.BorderSizePixel = 0
+    mainFrame.Active = true
+    mainFrame.Draggable = true
+
+    -- Corner
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 8)
+    corner.Parent = mainFrame
+
+    -- Title
+    local titleLabel = Instance.new("TextLabel")
+    titleLabel.Name = "Title"
+    titleLabel.Parent = mainFrame
+    titleLabel.Size = UDim2.new(1, 0, 0, 30)
+    titleLabel.Position = UDim2.new(0, 0, 0, 0)
+    titleLabel.BackgroundTransparency = 1
+    titleLabel.Text = "Pilih Gaya Carry untuk " .. targetPlayer.Name
+    titleLabel.TextColor3 = colors.text
+    titleLabel.TextScaled = true
+    titleLabel.Font = Enum.Font.SourceSansBold
+
+    -- Style buttons
+    local buttonY = 40
+    for styleName, styleData in pairs(carryStyles) do
+        local styleButton = Instance.new("TextButton")
+        styleButton.Name = styleName .. "Button"
+        styleButton.Parent = mainFrame
+        styleButton.Size = UDim2.new(1, -20, 0, 35)
+        styleButton.Position = UDim2.new(0, 10, 0, buttonY)
+        styleButton.BackgroundColor3 = colors.tertiary
+        styleButton.Text = styleData.DisplayName
+        styleButton.TextColor3 = colors.text
+        styleButton.Font = Enum.Font.SourceSans
+        styleButton.BorderSizePixel = 0
+
+        local buttonCorner = Instance.new("UICorner")
+        buttonCorner.CornerRadius = UDim.new(0, 5)
+        buttonCorner.Parent = styleButton
+
+        -- Button click handler
+        styleButton.MouseButton1Click:Connect(function()
+            currentCarryStyle = styleName
+            menuGui:Destroy()
+            showNotification("Carry style: " .. styleData.DisplayName, "Success")
+
+            -- Auto-start carry after style selection
+            if #selectedCarryPlayers > 0 then
+                startCarryingPlayers()
+            end
+        end)
+
+        -- Hover effects
+        styleButton.MouseEnter:Connect(function()
+            styleButton.BackgroundColor3 = colors.accent
+        end)
+
+        styleButton.MouseLeave:Connect(function()
+            styleButton.BackgroundColor3 = colors.tertiary
+        end)
+
+        buttonY = buttonY + 40
+    end
+
+    -- Close button
+    local closeButton = Instance.new("TextButton")
+    closeButton.Name = "CloseButton"
+    closeButton.Parent = mainFrame
+    closeButton.Size = UDim2.new(0, 20, 0, 20)
+    closeButton.Position = UDim2.new(1, -25, 0, 5)
+    closeButton.BackgroundColor3 = colors.danger or Color3.fromRGB(255, 0, 0)
+    closeButton.Text = "X"
+    closeButton.TextColor3 = Color3.new(1, 1, 1)
+    closeButton.Font = Enum.Font.SourceSansBold
+
+    local closeCorner = Instance.new("UICorner")
+    closeCorner.CornerRadius = UDim.new(0, 3)
+    closeCorner.Parent = closeButton
+
+    closeButton.MouseButton1Click:Connect(function()
+        menuGui:Destroy()
+        -- Clear selection
+        for i = #selectedCarryPlayers, 1, -1 do
+            if selectedCarryPlayers[i] == targetPlayer then
+                table.remove(selectedCarryPlayers, i)
+                break
+            end
+        end
+        refreshCarryPlayerList()
+    end)
 end
 
 -- Fly Functions
@@ -1989,44 +2352,65 @@ local function createCarryPlayerButton(targetPlayer, index)
     indicatorCorner.CornerRadius = UDim.new(0, 8)
     indicatorCorner.Parent = selectIndicator
 
-    -- Click handler for multi-select
+    -- Click handler for carry with style selection
     button.MouseButton1Click:Connect(function()
-        -- Check if player is already selected
-        local isSelected = false
-        local selectedIndex = -1
+        -- Show carry style menu when selecting a player
+        createCarryStyleMenu(targetPlayer)
 
+        -- Add to selection (will be confirmed after style selection)
+        local isSelected = false
         for i, player in ipairs(selectedCarryPlayers) do
             if player == targetPlayer then
                 isSelected = true
+                break
+            end
+        end
+
+        if not isSelected then
+            table.insert(selectedCarryPlayers, targetPlayer)
+            selectIndicator.Visible = true
+            button.BackgroundColor3 = colors.active
+            button.TextColor3 = colors.text
+
+            -- Update display
+            local selectedCount = #selectedCarryPlayers
+            selectedCarryDisplay.Text = "SELECTED: " .. selectedCount .. " PLAYER(S)"
+            startCarryButton.Active = true
+            startCarryButton.BackgroundColor3 = colors.active
+        end
+    end)
+
+    -- Right-click to remove from selection
+    button.MouseButton2Click:Connect(function()
+        -- Check if player is already selected
+        local selectedIndex = -1
+        for i, player in ipairs(selectedCarryPlayers) do
+            if player == targetPlayer then
                 selectedIndex = i
                 break
             end
         end
 
-        if isSelected then
+        if selectedIndex > 0 then
             -- Remove from selection
             table.remove(selectedCarryPlayers, selectedIndex)
             selectIndicator.Visible = false
             button.BackgroundColor3 = colors.inactive
             button.TextColor3 = colors.text_dim
-        else
-            -- Add to selection
-            table.insert(selectedCarryPlayers, targetPlayer)
-            selectIndicator.Visible = true
-            button.BackgroundColor3 = colors.active
-            button.TextColor3 = colors.text
-        end
 
-        -- Update display
-        local selectedCount = #selectedCarryPlayers
-        if selectedCount == 0 then
-            selectedCarryDisplay.Text = "SELECTED: NONE"
-            startCarryButton.Active = false
-            startCarryButton.BackgroundColor3 = colors.active
-        else
-            selectedCarryDisplay.Text = "SELECTED: " .. selectedCount .. " PLAYER(S)"
-            startCarryButton.Active = true
-            startCarryButton.BackgroundColor3 = colors.active
+            -- Update display
+            local selectedCount = #selectedCarryPlayers
+            if selectedCount == 0 then
+                selectedCarryDisplay.Text = "SELECTED: NONE"
+                startCarryButton.Active = false
+                startCarryButton.BackgroundColor3 = colors.active
+            else
+                selectedCarryDisplay.Text = "SELECTED: " .. selectedCount .. " PLAYER(S)"
+                startCarryButton.Active = true
+                startCarryButton.BackgroundColor3 = colors.active
+            end
+
+            showNotification("Removed " .. targetPlayer.Name .. " from carry selection", "Info")
         end
     end)
 
@@ -2086,15 +2470,31 @@ end
 local function startCarryingPlayers()
     if #selectedCarryPlayers == 0 or isCarryModeActive then return end
 
+    -- Check if carry style is selected
+    if not currentCarryStyle or not carryStyles[currentCarryStyle] then
+        showNotification("Silakan pilih gaya carry terlebih dahulu!", "Warning")
+        return
+    end
+
+    local carryStyle = carryStyles[currentCarryStyle]
+
     isCarryModeActive = true
     startCarryButton.Active = false
     startCarryButton.BackgroundColor3 = colors.inactive
     stopCarryButton.Active = true
     stopCarryButton.BackgroundColor3 = colors.active
-    carryStatusDisplay.Text = "STATUS: CARRYING"
+    carryStatusDisplay.Text = "STATUS: " .. carryStyle.DisplayName:upper()
     carryStatusDisplay.TextColor3 = colors.text
 
-    showNotification("CARRY_MODE: STARTED (" .. #selectedCarryPlayers .. " PLAYERS)")
+    -- Add players to carriedPlayers table
+    for _, targetPlayer in ipairs(selectedCarryPlayers) do
+        carriedPlayers[targetPlayer] = carryStyle
+    end
+
+    showNotification("CARRY_MODE: " .. carryStyle.DisplayName:upper() .. " (" .. #selectedCarryPlayers .. " PLAYERS)", "Success")
+
+    -- Create stop carry GUI
+    createStopCarryGui()
 
     -- Function to update carried players positions
     local function updateCarryPositions()
@@ -2111,44 +2511,63 @@ local function startCarryingPlayers()
             if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
                 local targetRootPart = targetPlayer.Character.HumanoidRootPart
                 local targetHumanoid = targetPlayer.Character:FindFirstChild("Humanoid")
+                local playerStyle = carriedPlayers[targetPlayer]
 
-                -- Calculate circular formation around admin with proper rotation
-                local angle = (i / #selectedCarryPlayers) * math.pi * 2
-                local radius = 5 + (#selectedCarryPlayers * 0.8) -- Increased dynamic radius
-                local offsetX = math.cos(angle) * radius
-                local offsetZ = math.sin(angle) * radius
+                if playerStyle then
+                    -- Calculate position based on carry style
+                    local angle = (i / #selectedCarryPlayers) * math.pi * 2
+                    local radius = playerStyle.Radius + (#selectedCarryPlayers * 0.5)
+                    local offsetX = math.cos(angle) * radius
+                    local offsetZ = math.sin(angle) * radius
 
-                -- Calculate target position relative to admin's rotation
-                local relativeOffset = adminCFrame:VectorToWorldSpace(Vector3.new(offsetX, carryOffset.Y, offsetZ))
-                local targetPosition = adminPosition + relativeOffset
+                    -- Calculate target position relative to admin's rotation
+                    local relativeOffset = adminCFrame:VectorToWorldSpace(Vector3.new(offsetX, playerStyle.Offset.Y, offsetZ))
+                    local targetPosition = adminPosition + relativeOffset
 
-                -- Set both position and rotation to match admin's facing direction
-                targetRootPart.CFrame = CFrame.new(targetPosition, adminPosition + adminCFrame.LookVector * 10)
-
-                -- Completely disable player movement and control
-                if targetHumanoid then
-                    targetHumanoid.WalkSpeed = 0
-                    targetHumanoid.JumpPower = 0
-                    targetHumanoid.PlatformStand = true
-
-                    -- Disable state changes to prevent escaping
-                    targetHumanoid:SetStateEnabled(Enum.HumanoidStateType.Falling, false)
-                    targetHumanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, false)
-                    targetHumanoid:SetStateEnabled(Enum.HumanoidStateType.Freefall, false)
-
-                    -- Force humanoid to stay in PlatformStand state
-                    if targetHumanoid:GetState() ~= Enum.HumanoidStateType.PlatformStand then
-                        targetHumanoid:ChangeState(Enum.HumanoidStateType.PlatformStand)
+                    -- Set position and rotation based on carry style
+                    if playerStyle.AllowControl then
+                        -- Push style - allow some control but keep following
+                        targetRootPart.CFrame = CFrame.new(targetPosition)
+                    else
+                        -- Carry and Drag styles - full control
+                        targetRootPart.CFrame = CFrame.new(targetPosition, adminPosition + adminCFrame.LookVector * 10)
                     end
-                end
 
-                -- Create weld for more stable carrying (if not exists)
-                if not targetRootPart:FindFirstChild("CarryWeld") then
-                    local weld = Instance.new("WeldConstraint")
-                    weld.Name = "CarryWeld"
-                    weld.Part0 = adminRootPart
-                    weld.Part1 = targetRootPart
-                    weld.Parent = targetRootPart
+                    -- Apply carry style settings to humanoid
+                    if targetHumanoid then
+                        if not playerStyle.AllowControl then
+                            targetHumanoid.WalkSpeed = 0
+                            targetHumanoid.JumpPower = 0
+                            targetHumanoid.PlatformStand = true
+
+                            -- Disable state changes to prevent escaping
+                            targetHumanoid:SetStateEnabled(Enum.HumanoidStateType.Falling, false)
+                            targetHumanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, false)
+                            targetHumanoid:SetStateEnabled(Enum.HumanoidStateType.Freefall, false)
+
+                            -- Force humanoid to stay in PlatformStand state
+                            if targetHumanoid:GetState() ~= Enum.HumanoidStateType.PlatformStand then
+                                targetHumanoid:ChangeState(Enum.HumanoidStateType.PlatformStand)
+                            end
+                        else
+                            -- Push style - allow limited control
+                            targetHumanoid.WalkSpeed = 8
+                            targetHumanoid.JumpPower = 25
+                            targetHumanoid.PlatformStand = false
+                        end
+                    end
+
+                    -- Create weld for stable carrying (except for push style)
+                    if not playerStyle.AllowControl and not targetRootPart:FindFirstChild("CarryWeld") then
+                        local weld = Instance.new("WeldConstraint")
+                        weld.Name = "CarryWeld"
+                        weld.Part0 = adminRootPart
+                        weld.Part1 = targetRootPart
+                        weld.Parent = targetRootPart
+                    end
+
+                    -- Add visual effect for carried players
+                    addCarryEffect(targetPlayer, playerStyle)
                 end
             end
         end
@@ -2230,7 +2649,7 @@ local function stopCarryingPlayers()
     carryStatusDisplay.Text = "STATUS: IDLE"
     carryStatusDisplay.TextColor3 = colors.text_dim
 
-    -- Restore player movement and clean up welds
+    -- Restore player movement and clean up
     for _, targetPlayer in ipairs(selectedCarryPlayers) do
         if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
             local targetRootPart = targetPlayer.Character.HumanoidRootPart
@@ -2256,7 +2675,13 @@ local function stopCarryingPlayers()
                 -- Force humanoid back to normal state
                 targetHumanoid:ChangeState(Enum.HumanoidStateType.Running)
             end
+
+            -- Remove carry effects
+            removeCarryEffect(targetPlayer)
         end
+
+        -- Remove from carriedPlayers table
+        carriedPlayers[targetPlayer] = nil
     end
 
     -- Clear carry connections
@@ -2267,7 +2692,13 @@ local function stopCarryingPlayers()
     end
     carryConnections = {}
 
-    showNotification("CARRY_MODE: STOPPED")
+    -- Remove stop carry GUI
+    local stopGui = player.PlayerGui:FindFirstChild("StopCarryGui")
+    if stopGui then
+        stopGui:Destroy()
+    end
+
+    showNotification("CARRY_MODE: STOPPED", "Info")
 end
 
 -- Button Events
