@@ -57,29 +57,17 @@ local carryPlayerButtons = {}
 local isCarryModeActive = false
 local carryConnections = {}  -- Untuk menyimpan heartbeat connections
 local carryOffset = Vector3.new(3, 5, 3)  -- Offset posisi carry relatif terhadap admin
-local currentCarryStyle = "Normal"  -- Default carry style
+local currentCarryStyle = "Rope"  -- Default carry style
 local carriedPlayers = {}  -- Players currently being carried
 local carryStyles = {
-    Normal = {
-        DisplayName = "Gendong Biasa",
-        Offset = Vector3.new(3, 5, 3),
-        Radius = 5,
-        Animation = "Carry",
-        AllowControl = false
-    },
-    Drag = {
-        DisplayName = "Seret",
-        Offset = Vector3.new(0, 2, 0),
-        Radius = 3,
-        Animation = "Drag",
-        AllowControl = false
-    },
-    Push = {
-        DisplayName = "Dorong",
-        Offset = Vector3.new(0, 3, -4),
+    Rope = {
+        DisplayName = "Tali Seret",
+        Offset = Vector3.new(0, 3, 8), -- Rope length behind admin
         Radius = 2,
-        Animation = "Push",
-        AllowControl = true
+        Animation = "Rope",
+        AllowControl = false,
+        RopeLength = 8,
+        RopeTension = 0.8
     }
 }
 
@@ -2041,44 +2029,44 @@ local function addCarryEffect(targetPlayer, carryStyle)
     effect.Parent = character:FindFirstChild("HumanoidRootPart") or character.PrimaryPart
 
     -- Add particles based on style
-    if carryStyle.Animation == "Carry" then
-        -- Floating particles for normal carry
+    if carryStyle.Animation == "Rope" then
+        -- Struggle particles - dust and debris when being dragged
+        local struggleParticles = Instance.new("ParticleEmitter")
+        struggleParticles.Name = "RopeStruggleParticles"
+        struggleParticles.Parent = effect
+        struggleParticles.Texture = "rbxasset://textures/particles/smoke_main.dds"
+        struggleParticles.Color = ColorSequence.new(Color3.new(0.6, 0.4, 0.2)) -- Brown dust color
+        struggleParticles.Size = NumberSequence.new(1.5, 0.3)
+        struggleParticles.Lifetime = NumberRange.new(0.5, 1.5)
+        struggleParticles.Rate = 15
+        struggleParticles.Speed = NumberRange.new(1, 3)
+        struggleParticles.Drag = 0.3
+        struggleParticles.SpreadAngle = Vector2.new(45, 45)
+        struggleParticles.Enabled = true
+
+        -- Rope tension sparks
+        local tensionSparks = Instance.new("ParticleEmitter")
+        tensionSparks.Name = "RopeTensionSparks"
+        tensionSparks.Parent = effect
+        tensionSparks.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+        tensionSparks.Color = ColorSequence.new(Color3.new(1, 0.8, 0)) -- Orange sparks
+        tensionSparks.Size = NumberSequence.new(0.4, 0.1)
+        tensionSparks.Lifetime = NumberRange.new(0.2, 0.5)
+        tensionSparks.Rate = 8
+        tensionSparks.Speed = NumberRange.new(3, 6)
+        tensionSparks.Drag = 0.1
+        tensionSparks.SpreadAngle = Vector2.new(15, 15)
+        tensionSparks.Enabled = true
+    else
+        -- Default particles for other styles
         local particles = Instance.new("ParticleEmitter")
         particles.Name = "CarryParticles"
         particles.Parent = effect
         particles.Texture = "rbxasset://textures/particles/sparkles_main.dds"
-        particles.Color = ColorSequence.new(Color3.new(1, 1, 1))
-        particles.Size = NumberSequence.new(0.2)
-        particles.Lifetime = NumberRange.new(1, 2)
-        particles.Rate = 5
-        particles.Speed = NumberRange.new(0.5, 1)
-        particles.Drag = 0.5
-        particles.Enabled = true
-
-    elseif carryStyle.Animation == "Drag" then
-        -- Dark particles for drag style
-        local particles = Instance.new("ParticleEmitter")
-        particles.Name = "DragParticles"
-        particles.Parent = effect
-        particles.Texture = "rbxasset://textures/particles/smoke_main.dds"
-        particles.Color = ColorSequence.new(Color3.new(0.3, 0.3, 0.3))
-        particles.Size = NumberSequence.new(0.5)
-        particles.Lifetime = NumberRange.new(2, 3)
-        particles.Rate = 10
-        particles.Speed = NumberRange.new(0, 0.5)
-        particles.Drag = 1
-        particles.Enabled = true
-
-    elseif carryStyle.Animation == "Push" then
-        -- Force-like particles for push style
-        local particles = Instance.new("ParticleEmitter")
-        particles.Name = "PushParticles"
-        particles.Parent = effect
-        particles.Texture = "rbxasset://textures/particles/sparkles_main.dds"
-        particles.Color = ColorSequence.new(Color3.fromRGB(0, 150, 255))
-        particles.Size = NumberSequence.new(0.3)
+        particles.Color = ColorSequence.new(Color3.new(0.5, 0.8, 1))
+        particles.Size = NumberSequence.new(0.3, 0.1)
         particles.Lifetime = NumberRange.new(0.5, 1)
-        particles.Rate = 15
+        particles.Rate = 8
         particles.Speed = NumberRange.new(2, 4)
         particles.Drag = 0.2
         particles.Enabled = true
@@ -2088,11 +2076,12 @@ local function addCarryEffect(targetPlayer, carryStyle)
     local light = Instance.new("PointLight")
     light.Name = "CarryLight"
     light.Parent = effect
-    light.Color = carryStyle.Animation == "Carry" and Color3.new(1, 1, 0.5) or
+    light.Color = carryStyle.Animation == "Rope" and Color3.new(1, 0.6, 0) or -- Orange for rope tension
+                    carryStyle.Animation == "Carry" and Color3.new(1, 1, 0.5) or
                     carryStyle.Animation == "Drag" and Color3.new(0.5, 0.5, 0.5) or
                     Color3.new(0.5, 0.8, 1)
-    light.Range = 8
-    light.Brightness = 0.3
+    light.Range = carryStyle.Animation == "Rope" and 6 or 8
+    light.Brightness = carryStyle.Animation == "Rope" and 0.4 or 0.3
 end
 
 -- Remove carry effects
@@ -2105,7 +2094,244 @@ local function removeCarryEffect(targetPlayer)
     end
 end
 
-  -- Fly Functions
+  -- Rope/Chain System for Carrying Players
+local function createRopeConnection(targetPlayer)
+    if not targetPlayer or not targetPlayer.Character or not character or not character:FindFirstChild("HumanoidRootPart") then
+        return nil
+    end
+
+    local targetRootPart = targetPlayer.Character:FindFirstChild("HumanoidRootPart")
+    local adminRootPart = character.HumanoidRootPart
+
+    if not targetRootPart then return nil end
+
+    -- Remove existing rope if any
+    local existingRope = targetPlayer.Character:FindFirstChild("CarryRope")
+    if existingRope then
+        existingRope:Destroy()
+    end
+
+    -- Create rope constraint
+    local rope = Instance.new("RopeConstraint")
+    rope.Name = "CarryRope"
+    rope.Parent = targetPlayer.Character
+
+    -- Create attachments
+    local adminAttachment = Instance.new("Attachment")
+    adminAttachment.Name = "RopeAttachment_Admin"
+    adminAttachment.Position = Vector3.new(0, 0, 0) -- Center of admin
+    adminAttachment.Parent = adminRootPart
+
+    local playerAttachment = Instance.new("Attachment")
+    playerAttachment.Name = "RopeAttachment_Player"
+    playerAttachment.Position = Vector3.new(0, 0, 0) -- Center of player
+    playerAttachment.Parent = targetRootPart
+
+    -- Configure rope
+    rope.Attachment0 = adminAttachment
+    rope.Attachment1 = playerAttachment
+    rope.Length = 8 -- Length of the rope
+    rope.Thickness = 0.2 -- Visual thickness
+    rope.Color = Color3.new(0.7, 0.7, 0.7) -- Gray color for rope
+    rope.Visible = true
+    rope.Enabled = true
+
+    -- Create visual rope segments for better appearance
+    local function createRopeVisuals()
+        -- Remove existing visuals
+        local existingVisuals = targetPlayer.Character:FindFirstChild("RopeVisuals")
+        if existingVisuals then
+            existingVisuals:Destroy()
+        end
+
+        local ropeVisuals = Instance.new("Model")
+        ropeVisuals.Name = "RopeVisuals"
+        ropeVisuals.Parent = targetPlayer.Character
+
+        -- Create multiple segments for realistic rope appearance
+        local segments = 8
+        for i = 1, segments do
+            local segment = Instance.new("Part")
+            segment.Name = "RopeSegment_" .. i
+            segment.Size = Vector3.new(0.3, 0.3, rope.Length / segments)
+            segment.Material = Enum.Material.Plastic
+            segment.Color = Color3.new(0.5, 0.5, 0.5)
+            segment.Anchored = false
+            segment.CanCollide = false
+            segment.TopSurface = Enum.SurfaceType.Smooth
+            segment.BottomSurface = Enum.SurfaceType.Smooth
+            segment.Parent = ropeVisuals
+
+            -- Add cylindrical shape
+            local mesh = Instance.new("CylinderMesh")
+            mesh.Parent = segment
+
+            -- Create constraints between segments
+            if i == 1 then
+                -- First segment connects to admin
+                local segmentConstraint = Instance.new("RopeConstraint")
+                segmentConstraint.Name = "SegmentConstraint_" .. i
+                segmentConstraint.Parent = segment
+                segmentConstraint.Attachment0 = adminAttachment
+                segmentConstraint.Length = rope.Length / segments
+                segmentConstraint.Thickness = 0.15
+                segmentConstraint.Visible = false
+
+                local segmentAttachment = Instance.new("Attachment")
+                segmentAttachment.Name = "SegmentAttachment"
+                segmentAttachment.Position = Vector3.new(0, -rope.Length / segments / 2, 0)
+                segmentAttachment.Parent = segment
+
+                segmentConstraint.Attachment1 = segmentAttachment
+            end
+
+            if i > 1 then
+                -- Connect to previous segment
+                local prevSegment = ropeVisuals:FindFirstChild("RopeSegment_" .. (i-1))
+                if prevSegment then
+                    local segmentConstraint = Instance.new("RopeConstraint")
+                    segmentConstraint.Name = "SegmentConstraint_" .. i
+                    segmentConstraint.Parent = segment
+                    segmentConstraint.Length = rope.Length / segments
+                    segmentConstraint.Thickness = 0.15
+                    segmentConstraint.Visible = false
+
+                    local segmentAttachment = Instance.new("Attachment")
+                    segmentAttachment.Name = "SegmentAttachment"
+                    segmentAttachment.Position = Vector3.new(0, rope.Length / segments / 2, 0)
+                    segmentAttachment.Parent = segment
+
+                    local prevAttachment = Instance.new("Attachment")
+                    prevAttachment.Name = "PrevSegmentAttachment"
+                    prevAttachment.Position = Vector3.new(0, -rope.Length / segments / 2, 0)
+                    prevAttachment.Parent = prevSegment
+
+                    segmentConstraint.Attachment0 = prevAttachment
+                    segmentConstraint.Attachment1 = segmentAttachment
+                end
+            end
+
+            if i == segments then
+                -- Last segment connects to player
+                local segmentConstraint = Instance.new("RopeConstraint")
+                segmentConstraint.Name = "SegmentConstraint_Final"
+                segmentConstraint.Parent = segment
+                segmentConstraint.Attachment1 = playerAttachment
+                segmentConstraint.Length = rope.Length / segments
+                segmentConstraint.Thickness = 0.15
+                segmentConstraint.Visible = false
+
+                local segmentAttachment = Instance.new("Attachment")
+                segmentAttachment.Name = "SegmentAttachment"
+                segmentAttachment.Position = Vector3.new(0, rope.Length / segments / 2, 0)
+                segmentAttachment.Parent = segment
+
+                segmentConstraint.Attachment0 = segmentAttachment
+            end
+
+            -- Add weight to segments for realistic physics
+            local bodyVelocity = Instance.new("BodyVelocity")
+            bodyVelocity.MaxForce = Vector3.new(0, 1000, 0)
+            bodyVelocity.Velocity = Vector3.new(0, -50, 0) -- Downward force
+            bodyVelocity.P = 1000
+            bodyVelocity.Parent = segment
+        end
+    end
+
+    createRopeVisuals()
+
+    -- Add physics effects to make player feel dragged
+    local function applyDragEffect()
+        if not targetRootPart or not targetRootPart.Parent then return end
+
+        -- Create strong pulling force towards admin
+        local bodyVelocity = Instance.new("BodyVelocity")
+        bodyVelocity.Name = "DragVelocity"
+        bodyVelocity.MaxForce = Vector3.new(50000, 50000, 50000) -- Very strong force
+        bodyVelocity.P = 10000 -- High responsiveness
+        bodyVelocity.Velocity = Vector3.new(0, 0, 0)
+        bodyVelocity.Parent = targetRootPart
+
+        -- Add spinning/rotating effect to show struggle
+        local bodyAngularVelocity = Instance.new("BodyAngularVelocity")
+        bodyAngularVelocity.Name = "DragSpin"
+        bodyAngularVelocity.MaxTorque = Vector3.new(50000, 50000, 50000)
+        bodyAngularVelocity.P = 10000
+        bodyAngularVelocity.AngularVelocity = Vector3.new(math.random(-5, 5), math.random(-5, 5), math.random(-5, 5))
+        bodyAngularVelocity.Parent = targetRootPart
+    end
+
+    applyDragEffect()
+
+    -- Create rope tension effect (particles when rope is stretched)
+    local function createRopeTensionEffect()
+        local tensionParticles = Instance.new("ParticleEmitter")
+        tensionParticles.Name = "RopeTensionEffect"
+        tensionParticles.Parent = rope
+
+        tensionParticles.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+        tensionParticles.Color = ColorSequence.new(Color3.new(1, 1, 0.5), Color3.new(1, 0.5, 0))
+        tensionParticles.Size = NumberSequence.new(0.3, 0.1)
+        tensionParticles.Lifetime = NumberRange.new(0.5, 1)
+        tensionParticles.Rate = 10
+        tensionParticles.Speed = NumberRange.new(5, 10)
+        tensionParticles.SpreadAngle = Vector2.new(30, 30)
+        tensionParticles.Enabled = false
+
+        return tensionParticles
+    end
+
+    local tensionEffect = createRopeTensionEffect()
+
+    -- Return the rope and its components for management
+    return {
+        Rope = rope,
+        AdminAttachment = adminAttachment,
+        PlayerAttachment = playerAttachment,
+        RopeVisuals = ropeVisuals,
+        TensionEffect = tensionEffect
+    }
+end
+
+local function removeRopeConnection(targetPlayer)
+    if not targetPlayer or not targetPlayer.Character then return end
+
+    -- Remove rope constraint
+    local rope = targetPlayer.Character:FindFirstChild("CarryRope")
+    if rope then
+        rope:Destroy()
+    end
+
+    -- Remove rope visuals
+    local ropeVisuals = targetPlayer.Character:FindFirstChild("RopeVisuals")
+    if ropeVisuals then
+        ropeVisuals:Destroy()
+    end
+
+    -- Remove physics effects
+    local targetRootPart = targetPlayer.Character:FindFirstChild("HumanoidRootPart")
+    if targetRootPart then
+        local dragVelocity = targetRootPart:FindFirstChild("DragVelocity")
+        if dragVelocity then
+            dragVelocity:Destroy()
+        end
+
+        local dragSpin = targetRootPart:FindFirstChild("DragSpin")
+        if dragSpin then
+            dragSpin:Destroy()
+        end
+    end
+
+    -- Remove admin attachment
+    if character and character:FindFirstChild("HumanoidRootPart") then
+        local adminAttachment = character.HumanoidRootPart:FindFirstChild("RopeAttachment_Admin")
+        if adminAttachment then
+            adminAttachment:Destroy()
+        end
+    end
+end
+
+-- Fly Functions
 local function enableFly()
     if isFlying then return end
 
@@ -2268,7 +2494,7 @@ local function createCarryPlayerButton(targetPlayer, index)
             button.TextColor3 = colors.text
 
             -- Set default carry style
-            currentCarryStyle = "Normal"
+            currentCarryStyle = "Rope"
 
             -- Update display
             local selectedCount = #selectedCarryPlayers
@@ -2376,7 +2602,7 @@ local function startCarryingPlayers()
     if #selectedCarryPlayers == 0 or isCarryModeActive then return end
 
     -- Use default carry style if not set
-    local carryStyle = carryStyles[currentCarryStyle] or carryStyles.Normal
+    local carryStyle = carryStyles[currentCarryStyle] or carryStyles.Rope
 
     isCarryModeActive = true
     startCarryButton.Active = false
@@ -2386,9 +2612,19 @@ local function startCarryingPlayers()
     carryStatusDisplay.Text = "STATUS: " .. carryStyle.DisplayName:upper()
     carryStatusDisplay.TextColor3 = colors.text
 
-    -- Add players to carriedPlayers table
+    -- Add players to carriedPlayers table and create rope connections
     for _, targetPlayer in ipairs(selectedCarryPlayers) do
         carriedPlayers[targetPlayer] = carryStyle
+
+        -- Create rope connection for each player
+        local ropeConnection = createRopeConnection(targetPlayer)
+        if ropeConnection then
+            -- Store rope connection for cleanup
+            targetPlayer.RopeConnection = ropeConnection
+
+            -- Add visual rope carry effect with struggle animation
+            addCarryEffect(targetPlayer, carryStyles.Rope)
+        end
     end
 
     showNotification("CARRY_MODE: " .. carryStyle.DisplayName:upper() .. " (" .. #selectedCarryPlayers .. " PLAYERS)", "Success")
@@ -2396,7 +2632,7 @@ local function startCarryingPlayers()
     -- Create stop carry GUI
     createStopCarryGui()
 
-    -- Function to update carried players positions
+    -- Function to update carried players positions with rope physics
     local function updateCarryPositions()
         if not isCarryModeActive or not character or not character:FindFirstChild("HumanoidRootPart") then
             return
@@ -2406,68 +2642,82 @@ local function startCarryingPlayers()
         local adminCFrame = adminRootPart.CFrame
         local adminPosition = adminRootPart.Position
 
-        -- Update each carried player
+        -- Update each carried player with rope physics
         for i, targetPlayer in ipairs(selectedCarryPlayers) do
             if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
                 local targetRootPart = targetPlayer.Character.HumanoidRootPart
                 local targetHumanoid = targetPlayer.Character:FindFirstChild("Humanoid")
                 local playerStyle = carriedPlayers[targetPlayer]
 
-                if playerStyle then
-                    -- Calculate position based on carry style
-                    local angle = (i / #selectedCarryPlayers) * math.pi * 2
-                    local radius = playerStyle.Radius + (#selectedCarryPlayers * 0.5)
-                    local offsetX = math.cos(angle) * radius
-                    local offsetZ = math.sin(angle) * radius
+                if playerStyle and targetPlayer.RopeConnection then
+                    -- Calculate rope drag direction and force
+                    local distance = (adminPosition - targetRootPart.Position).Magnitude
+                    local direction = (adminPosition - targetRootPart.Position).Unit
+                    local ropeLength = 8 -- Same as rope constraint length
 
-                    -- Calculate target position relative to admin's rotation
-                    local relativeOffset = adminCFrame:VectorToWorldSpace(Vector3.new(offsetX, playerStyle.Offset.Y, offsetZ))
-                    local targetPosition = adminPosition + relativeOffset
-
-                    -- Set position and rotation based on carry style
-                    if playerStyle.AllowControl then
-                        -- Push style - allow some control but keep following
-                        targetRootPart.CFrame = CFrame.new(targetPosition)
-                    else
-                        -- Carry and Drag styles - full control
-                        targetRootPart.CFrame = CFrame.new(targetPosition, adminPosition + adminCFrame.LookVector * 10)
+                    -- Apply rope tension effects
+                    if targetPlayer.RopeConnection.TensionEffect then
+                        targetPlayer.RopeConnection.TensionEffect.Enabled = distance > ropeLength * 0.8
                     end
 
-                    -- Apply carry style settings to humanoid
-                    if targetHumanoid then
-                        if not playerStyle.AllowControl then
-                            targetHumanoid.WalkSpeed = 0
-                            targetHumanoid.JumpPower = 0
-                            targetHumanoid.PlatformStand = true
+                    -- Apply drag force through BodyVelocity
+                    local dragVelocity = targetRootPart:FindFirstChild("DragVelocity")
+                    if dragVelocity then
+                        if distance > ropeLength then
+                            -- Strong pull when rope is taut
+                            local pullForce = (distance - ropeLength) * 1000
+                            dragVelocity.Velocity = direction * math.min(pullForce, 200)
 
-                            -- Disable state changes to prevent escaping
-                            targetHumanoid:SetStateEnabled(Enum.HumanoidStateType.Falling, false)
-                            targetHumanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, false)
-                            targetHumanoid:SetStateEnabled(Enum.HumanoidStateType.Freefall, false)
-
-                            -- Force humanoid to stay in PlatformStand state
-                            if targetHumanoid:GetState() ~= Enum.HumanoidStateType.PlatformStand then
-                                targetHumanoid:ChangeState(Enum.HumanoidStateType.PlatformStand)
-                            end
+                            -- Add some randomness for struggle effect
+                            dragVelocity.Velocity = dragVelocity.Velocity + Vector3.new(
+                                math.random(-20, 20),
+                                math.random(-10, 30),
+                                math.random(-20, 20)
+                            )
                         else
-                            -- Push style - allow limited control
-                            targetHumanoid.WalkSpeed = 8
-                            targetHumanoid.JumpPower = 25
-                            targetHumanoid.PlatformStand = false
+                            -- Gentle pull when rope is slack
+                            dragVelocity.Velocity = direction * 20
                         end
                     end
 
-                    -- Create weld for stable carrying (except for push style)
-                    if not playerStyle.AllowControl and not targetRootPart:FindFirstChild("CarryWeld") then
-                        local weld = Instance.new("WeldConstraint")
-                        weld.Name = "CarryWeld"
-                        weld.Part0 = adminRootPart
-                        weld.Part1 = targetRootPart
-                        weld.Parent = targetRootPart
+                    -- Update rope attachment position on player (struggle effect)
+                    if targetPlayer.RopeConnection.PlayerAttachment then
+                        local struggleOffset = Vector3.new(
+                            math.sin(time() * 10 + i) * 0.5,
+                            math.cos(time() * 8 + i) * 0.3,
+                            math.sin(time() * 12 + i) * 0.5
+                        )
+                        targetPlayer.RopeConnection.PlayerAttachment.Position = struggleOffset
                     end
 
-                    -- Add visual effect for carried players
-                    addCarryEffect(targetPlayer, playerStyle)
+                    -- Apply humanoid restrictions for rope carry
+                    if targetHumanoid then
+                        targetHumanoid.WalkSpeed = 0
+                        targetHumanoid.JumpPower = 0
+                        targetHumanoid.PlatformStand = true
+
+                        -- Disable escaping states
+                        targetHumanoid:SetStateEnabled(Enum.HumanoidStateType.Falling, false)
+                        targetHumanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, false)
+                        targetHumanoid:SetStateEnabled(Enum.HumanoidStateType.Freefall, false)
+                        targetHumanoid:SetStateEnabled(Enum.HumanoidStateType.Swimming, false)
+                        targetHumanoid:SetStateEnabled(Enum.HumanoidStateType.Climbing, false)
+
+                        -- Keep player in PlatformStand state
+                        if targetHumanoid:GetState() ~= Enum.HumanoidStateType.PlatformStand then
+                            targetHumanoid:ChangeState(Enum.HumanoidStateType.PlatformStand)
+                        end
+
+                        -- Add random rotation/spinning for struggle effect
+                        local dragSpin = targetRootPart:FindFirstChild("DragSpin")
+                        if dragSpin then
+                            dragSpin.AngularVelocity = Vector3.new(
+                                math.sin(time() * 5 + i) * 3,
+                                math.cos(time() * 7 + i) * 4,
+                                math.sin(time() * 3 + i) * 2
+                            )
+                        end
+                    end
                 end
             end
         end
@@ -2555,11 +2805,11 @@ local function stopCarryingPlayers()
             local targetRootPart = targetPlayer.Character.HumanoidRootPart
             local targetHumanoid = targetPlayer.Character:FindFirstChild("Humanoid")
 
-            -- Remove carry weld if exists
-            local carryWeld = targetRootPart:FindFirstChild("CarryWeld")
-            if carryWeld then
-                carryWeld:Destroy()
-            end
+            -- Remove rope connection
+            removeRopeConnection(targetPlayer)
+
+            -- Clear rope connection reference
+            targetPlayer.RopeConnection = nil
 
             -- Restore humanoid movement and states
             if targetHumanoid then
