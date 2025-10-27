@@ -47,6 +47,10 @@ local playerLines = {}
 local lineRefreshRate = 0.1
 local lineUpdateConnection = nil
 
+-- Teleport variables
+local selectedTeleportPlayer = nil
+local teleportPlayerButtons = {}
+
 -- Category collapse state variables
 local isMainCategoryCollapsed = false
 local isLocalPlayerCategoryCollapsed = false
@@ -568,9 +572,10 @@ local flyControlsInfo = Instance.new("TextLabel")
 flyControlsInfo.Name = "FlyControlsInfo"
 flyControlsInfo.Parent = flySection
 flyControlsInfo.BackgroundTransparency = 1
-flyControlsInfo.Position = UDim2.new(0, 10, 0, 60)
-flyControlsInfo.Size = UDim2.new(0, 270, 0, 20)
+flyControlsInfo.Position = UDim2.new(0, 75, 0, 60)  -- Moved to right of input field
+flyControlsInfo.Size = UDim2.new(0, 205, 0, 20)   -- Adjusted width
 flyControlsInfo.Font = Enum.Font.Code
+flyControlsInfo.Text = "W:FORWARD S:BACK A:LEFT D:RIGHT SPACE:UP SHIFT:DOWN"
 flyControlsInfo.TextColor3 = colors.text_dim
 flyControlsInfo.TextSize = 9
 
@@ -940,6 +945,91 @@ linePlayerStatusDisplay.Text = "PLAYERS: 0 | STATUS: INACTIVE"
 linePlayerStatusDisplay.TextColor3 = colors.text
 linePlayerStatusDisplay.TextSize = 9
 
+-- Teleport Section (Sub-category of LOCALPLAYER)
+local teleportSection = Instance.new("Frame")
+teleportSection.Name = "TeleportSection"
+teleportSection.Parent = scrollFrame
+teleportSection.BackgroundColor3 = colors.secondary
+teleportSection.BorderSizePixel = 1
+teleportSection.BorderColor3 = colors.tertiary
+teleportSection.Position = UDim2.new(0, 15, 0, 685)  -- Will be positioned by updateCategoryPositions
+teleportSection.Size = UDim2.new(0, 290, 0, 180)
+
+local teleportCorner = Instance.new("UICorner")
+teleportCorner.CornerRadius = UDim.new(0, 3)
+teleportCorner.Parent = teleportSection
+
+-- Teleport Section Header
+local teleportSectionLabel = Instance.new("TextLabel")
+teleportSectionLabel.Name = "TeleportSectionLabel"
+teleportSectionLabel.Parent = teleportSection
+teleportSectionLabel.BackgroundTransparency = 1
+teleportSectionLabel.Position = UDim2.new(0, 10, 0, 5)
+teleportSectionLabel.Size = UDim2.new(0, 270, 0, 20)
+teleportSectionLabel.Font = Enum.Font.Code
+teleportSectionLabel.Text = "{02} PLAYER_TELEPORT"
+teleportSectionLabel.TextColor3 = colors.text_dim
+teleportSectionLabel.TextSize = 11
+teleportSectionLabel.TextXAlignment = Enum.TextXAlignment.Left
+
+-- Player List Container
+local playerListContainer = Instance.new("Frame")
+playerListContainer.Name = "PlayerListContainer"
+playerListContainer.Parent = teleportSection
+playerListContainer.BackgroundColor3 = colors.tertiary
+playerListContainer.BorderSizePixel = 0
+playerListContainer.Position = UDim2.new(0, 10, 0, 30)
+playerListContainer.Size = UDim2.new(0, 270, 0, 100)
+
+local playerListCorner = Instance.new("UICorner")
+playerListCorner.CornerRadius = UDim.new(0, 2)
+playerListCorner.Parent = playerListContainer
+
+-- Player List ScrollFrame
+local playerListScroll = Instance.new("ScrollingFrame")
+playerListScroll.Name = "PlayerListScroll"
+playerListScroll.Parent = playerListContainer
+playerListScroll.BackgroundColor3 = colors.tertiary
+playerListScroll.BackgroundTransparency = 0
+playerListScroll.BorderSizePixel = 0
+playerListScroll.Position = UDim2.new(0, 0, 0, 0)
+playerListScroll.Size = UDim2.new(1, 0, 1, 0)
+playerListScroll.ScrollBarThickness = 4
+playerListScroll.ScrollBarImageColor3 = colors.accent
+playerListScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+playerListScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+
+-- Teleport Button
+local teleportButton = Instance.new("TextButton")
+teleportButton.Name = "TeleportButton"
+teleportButton.Parent = teleportSection
+teleportButton.BackgroundColor3 = colors.active
+teleportButton.BorderSizePixel = 1
+teleportButton.BorderColor3 = colors.accent
+teleportButton.Position = UDim2.new(0, 10, 0, 140)
+teleportButton.Size = UDim2.new(0, 270, 0, 25)
+teleportButton.Font = Enum.Font.Code
+teleportButton.Text = "TELEPORT TO PLAYER"
+teleportButton.TextColor3 = colors.text
+teleportButton.TextSize = 11
+teleportButton.Active = false  -- Disabled until player is selected
+
+local teleportButtonCorner = Instance.new("UICorner")
+teleportButtonCorner.CornerRadius = UDim.new(0, 2)
+teleportButtonCorner.Parent = teleportButton
+
+-- Selected Player Display
+local selectedPlayerDisplay = Instance.new("TextLabel")
+selectedPlayerDisplay.Name = "SelectedPlayerDisplay"
+selectedPlayerDisplay.Parent = teleportSection
+selectedPlayerDisplay.BackgroundTransparency = 1
+selectedPlayerDisplay.Position = UDim2.new(0, 10, 0, 170)
+selectedPlayerDisplay.Size = UDim2.new(0, 270, 0, 15)
+selectedPlayerDisplay.Font = Enum.Font.Code
+selectedPlayerDisplay.Text = "SELECTED: NONE"
+selectedPlayerDisplay.TextColor3 = colors.text_dim
+selectedPlayerDisplay.TextSize = 9
+
 -- Line Player Functions
 local function updateLinePlayerToggleSwitch(enabled)
     if enabled then
@@ -1111,6 +1201,149 @@ local function disableLinePlayer()
     showNotification("LINE_PLAYER_ON_HEAD: DISABLED")
 end
 
+-- Teleport Functions
+local function createPlayerButton(targetPlayer)
+    -- Don't create button for local player (admin)
+    if targetPlayer == player then return end
+
+    -- Remove existing button for this player
+    if teleportPlayerButtons[targetPlayer] then
+        teleportPlayerButtons[targetPlayer]:Destroy()
+        teleportPlayerButtons[targetPlayer] = nil
+    end
+
+    -- Create new button
+    local playerButton = Instance.new("TextButton")
+    playerButton.Name = "PlayerButton_" .. targetPlayer.Name
+    playerButton.Parent = playerListScroll
+    playerButton.BackgroundColor3 = colors.inactive
+    playerButton.BorderSizePixel = 0
+    playerButton.Size = UDim2.new(1, -4, 0, 20)
+    playerButton.Font = Enum.Font.Code
+    playerButton.Text = targetPlayer.Name
+    playerButton.TextColor3 = colors.text
+    playerButton.TextSize = 10
+    playerButton.TextXAlignment = Enum.TextXAlignment.Left
+    playerButton.TextYAlignment = Enum.TextYAlignment.Center
+
+    local buttonCorner = Instance.new("UICorner")
+    buttonCorner.CornerRadius = UDim.new(0, 2)
+    buttonCorner.Parent = playerButton
+
+    -- Store reference
+    teleportPlayerButtons[targetPlayer] = playerButton
+
+    -- Click handler
+    playerButton.MouseButton1Click:Connect(function()
+        -- Deselect previous player
+        if selectedTeleportPlayer and selectedTeleportPlayer ~= targetPlayer then
+            if teleportPlayerButtons[selectedTeleportPlayer] then
+                teleportPlayerButtons[selectedTeleportPlayer].BackgroundColor3 = colors.inactive
+            end
+        end
+
+        -- Select new player
+        selectedTeleportPlayer = targetPlayer
+        playerButton.BackgroundColor3 = colors.active
+        teleportButton.Active = true
+        teleportButton.BackgroundColor3 = colors.active
+        selectedPlayerDisplay.Text = "SELECTED: " .. targetPlayer.Name
+        selectedPlayerDisplay.TextColor3 = colors.text
+    end)
+
+    -- Hover effects
+    playerButton.MouseEnter:Connect(function()
+        if selectedTeleportPlayer ~= targetPlayer then
+            TweenService:Create(playerButton, TweenInfo.new(0.1), {BackgroundColor3 = colors.tertiary}):Play()
+        end
+    end)
+
+    playerButton.MouseLeave:Connect(function()
+        if selectedTeleportPlayer ~= targetPlayer then
+            TweenService:Create(playerButton, TweenInfo.new(0.1), {BackgroundColor3 = colors.inactive}):Play()
+        end
+    end)
+end
+
+local function removePlayerButton(targetPlayer)
+    if teleportPlayerButtons[targetPlayer] then
+        teleportPlayerButtons[targetPlayer]:Destroy()
+        teleportPlayerButtons[targetPlayer] = nil
+
+        -- Clear selection if this player was selected
+        if selectedTeleportPlayer == targetPlayer then
+            selectedTeleportPlayer = nil
+            teleportButton.Active = false
+            teleportButton.BackgroundColor3 = colors.inactive
+            selectedPlayerDisplay.Text = "SELECTED: NONE"
+            selectedPlayerDisplay.TextColor3 = colors.text_dim
+        end
+    end
+end
+
+local function refreshPlayerList()
+    -- Clear existing buttons
+    for _, button in pairs(teleportPlayerButtons) do
+        if button then
+            button:Destroy()
+        end
+    end
+    teleportPlayerButtons = {}
+
+    -- Clear selection
+    selectedTeleportPlayer = nil
+    teleportButton.Active = false
+    teleportButton.BackgroundColor3 = colors.inactive
+    selectedPlayerDisplay.Text = "SELECTED: NONE"
+    selectedPlayerDisplay.TextColor3 = colors.text_dim
+
+    -- Create buttons for all players except local player
+    local buttonY = 0
+    for _, targetPlayer in ipairs(Players:GetPlayers()) do
+        if targetPlayer ~= player then
+            createPlayerButton(targetPlayer)
+            buttonY = buttonY + 22
+        end
+    end
+
+    -- Update canvas size
+    playerListScroll.CanvasSize = UDim2.new(0, 0, 0, buttonY)
+end
+
+local function teleportToTargetPlayer()
+    if not selectedTeleportPlayer or not selectedTeleportPlayer.Character then
+        showNotification("TELEPORT: INVALID_TARGET")
+        return
+    end
+
+    local targetCharacter = selectedTeleportPlayer.Character
+    local targetHumanoidRootPart = targetCharacter:FindFirstChild("HumanoidRootPart")
+
+    if not targetHumanoidRootPart then
+        showNotification("TELEPORT: TARGET_NOT_LOADED")
+        return
+    end
+
+    -- Get local player character
+    local localCharacter = player.Character
+    if not localCharacter then
+        showNotification("TELEPORT: LOCAL_CHARACTER_NOT_FOUND")
+        return
+    end
+
+    local localHumanoidRootPart = localCharacter:FindFirstChild("HumanoidRootPart")
+    if not localHumanoidRootPart then
+        showNotification("TELEPORT: LOCAL_ROOTPART_NOT_FOUND")
+        return
+    end
+
+    -- Perform teleport
+    local targetCFrame = targetHumanoidRootPart.CFrame
+    localHumanoidRootPart.CFrame = targetCFrame + Vector3.new(0, 3, 0) -- Slightly above target
+
+    showNotification("TELEPORT: SUCCESS_TO_" .. selectedTeleportPlayer.Name:upper())
+end
+
 -- Category Collapse/Expand Functions
 local function updateCategoryPositions()
     local speedSectionY = isMainCategoryCollapsed and 50 or 160
@@ -1119,6 +1352,7 @@ local function updateCategoryPositions()
     local quickControlsY = jumpSectionY + (isMainCategoryCollapsed and 0 or 120)
     local localPlayerY = quickControlsY + (isMainCategoryCollapsed and 0 or 75)
     local linePlayerY = localPlayerY + (isLocalPlayerCategoryCollapsed and 0 or 50)
+    local teleportY = linePlayerY + (isLocalPlayerCategoryCollapsed and 0 or 85)
 
     -- Update positions with animation
     local function updatePosition(element, y)
@@ -1137,6 +1371,7 @@ local function updateCategoryPositions()
     updatePosition(quickControls, quickControlsY)
     updatePosition(localPlayerCategorySection, localPlayerY)
     updatePosition(linePlayerSection, linePlayerY)
+    updatePosition(teleportSection, teleportY)
 
     -- Update visibility
     speedSection.Visible = not isMainCategoryCollapsed
@@ -1144,6 +1379,7 @@ local function updateCategoryPositions()
     jumpSection.Visible = not isMainCategoryCollapsed
     quickControls.Visible = not isMainCategoryCollapsed
     linePlayerSection.Visible = not isLocalPlayerCategoryCollapsed
+    teleportSection.Visible = not isLocalPlayerCategoryCollapsed
 end
 
 local function toggleMainCategory()
@@ -1326,9 +1562,17 @@ local function enableCustomSpeed()
     if isSpeedEnabled then return end
 
     isSpeedEnabled = true
-    humanoid.WalkSpeed = customWalkSpeed
+    -- Use the value from input field, not just customWalkSpeed variable
+    local inputSpeed = tonumber(speedInput.Text) or customWalkSpeed
+    if inputSpeed >= 1 and inputSpeed <= 200 then
+        humanoid.WalkSpeed = inputSpeed
+        customWalkSpeed = inputSpeed
+        speedValueLabel.Text = "VAL:" .. inputSpeed
+    else
+        humanoid.WalkSpeed = customWalkSpeed
+        speedValueLabel.Text = "VAL:" .. customWalkSpeed
+    end
     updateToggleSwitch(true)
-    speedValueLabel.Text = "VAL:" .. customWalkSpeed
     currentStatusLabel.Text = "CUR:ON"
     currentStatusLabel.TextColor3 = colors.text
     updateStatus(true)
@@ -1357,11 +1601,15 @@ local function updateCustomSpeed(newSpeed)
         speedInput.Text = tostring(speed)
 
         if isSpeedEnabled then
-            humanoid.WalkSpeed = customWalkSpeed
-            speedValueLabel.Text = "VAL:" .. customWalkSpeed
+            humanoid.WalkSpeed = speed  -- Apply immediately if enabled
+            speedValueLabel.Text = "VAL:" .. speed
         end
+        -- Update display even if not enabled
+        speedValueLabel.Text = "VAL:" .. speed
     else
+        -- Revert to last valid value
         speedInput.Text = tostring(customWalkSpeed)
+        speedValueLabel.Text = "VAL:" .. customWalkSpeed
     end
 end
 
@@ -1572,6 +1820,24 @@ end)
 
 localPlayerCategoryButton.MouseButton1Click:Connect(function()
     toggleLocalPlayerCategory()
+end)
+
+-- Teleport Button Click Handler
+teleportButton.MouseButton1Click:Connect(function()
+    teleportToTargetPlayer()
+end)
+
+-- Hover Effects for Teleport Button
+teleportButton.MouseEnter:Connect(function()
+    if teleportButton.Active then
+        TweenService:Create(teleportButton, TweenInfo.new(0.1), {BackgroundColor3 = colors.active}):Play()
+    end
+end)
+
+teleportButton.MouseLeave:Connect(function()
+    if teleportButton.Active then
+        TweenService:Create(teleportButton, TweenInfo.new(0.1), {BackgroundColor3 = colors.active}):Play()
+    end
 end)
 
 -- Hover Effects
@@ -1855,16 +2121,23 @@ Players.PlayerAdded:Connect(function(newPlayer)
             end
         end)
     end
+    -- Refresh teleport player list
+    refreshPlayerList()
 end)
 
 Players.PlayerRemoving:Connect(function(removingPlayer)
     if isLinePlayerEnabled then
         removePlayerLine(removingPlayer)
     end
+    -- Refresh teleport player list
+    refreshPlayerList()
 end)
 
 -- Initialize category positions
 updateCategoryPositions()
+
+-- Initialize teleport player list
+refreshPlayerList()
 
 print("[SYSTEM] .SYSTEM: INITIALIZED")
 print("[KEYBINDS] X:SPEED F:FLY J:INFINITE_JUMP H:HIGH_JUMP L:LINE_PLAYER")
