@@ -47,6 +47,10 @@ local playerLines = {}
 local lineRefreshRate = 0.1
 local lineUpdateConnection = nil
 
+-- Category collapse state variables
+local isMainCategoryCollapsed = false
+local isLocalPlayerCategoryCollapsed = false
+
 -- Color scheme (monochrome)
 local colors = {
     primary = Color3.fromRGB(20, 20, 20),
@@ -262,13 +266,37 @@ local mainCategoryCorner = Instance.new("UICorner")
 mainCategoryCorner.CornerRadius = UDim.new(0, 3)
 mainCategoryCorner.Parent = mainCategorySection
 
+-- Main Category Header Button (clickable)
+local mainCategoryButton = Instance.new("TextButton")
+mainCategoryButton.Name = "MainCategoryButton"
+mainCategoryButton.Parent = mainCategorySection
+mainCategoryButton.BackgroundTransparency = 1
+mainCategoryButton.Position = UDim2.new(0, 0, 0, 0)
+mainCategoryButton.Size = UDim2.new(1, 0, 1, 0)
+mainCategoryButton.Text = ""
+mainCategoryButton.Font = Enum.Font.SourceSans
+mainCategoryButton.TextSize = 1
+
+-- Expand/Collapse Indicator
+local mainCategoryIndicator = Instance.new("TextLabel")
+mainCategoryIndicator.Name = "MainCategoryIndicator"
+mainCategoryIndicator.Parent = mainCategorySection
+mainCategoryIndicator.BackgroundTransparency = 1
+mainCategoryIndicator.Position = UDim2.new(0, 10, 0, 8)
+mainCategoryIndicator.Size = UDim2.new(0, 20, 0, 20)
+mainCategoryIndicator.Font = Enum.Font.Code
+mainCategoryIndicator.Text = "▼"
+mainCategoryIndicator.TextColor3 = colors.text
+mainCategoryIndicator.TextSize = 12
+mainCategoryIndicator.TextXAlignment = Enum.TextXAlignment.Left
+
 -- Main Category Header
 local mainCategoryLabel = Instance.new("TextLabel")
 mainCategoryLabel.Name = "MainCategoryLabel"
 mainCategoryLabel.Parent = mainCategorySection
 mainCategoryLabel.BackgroundTransparency = 1
-mainCategoryLabel.Position = UDim2.new(0, 10, 0, 8)
-mainCategoryLabel.Size = UDim2.new(0, 270, 0, 20)
+mainCategoryLabel.Position = UDim2.new(0, 35, 0, 8)
+mainCategoryLabel.Size = UDim2.new(0, 245, 0, 20)
 mainCategoryLabel.Font = Enum.Font.Code
 mainCategoryLabel.Text = "MAIN"
 mainCategoryLabel.TextColor3 = colors.text
@@ -778,13 +806,37 @@ local localPlayerCategoryCorner = Instance.new("UICorner")
 localPlayerCategoryCorner.CornerRadius = UDim.new(0, 3)
 localPlayerCategoryCorner.Parent = localPlayerCategorySection
 
+-- LocalPlayer Category Header Button (clickable)
+local localPlayerCategoryButton = Instance.new("TextButton")
+localPlayerCategoryButton.Name = "LocalPlayerCategoryButton"
+localPlayerCategoryButton.Parent = localPlayerCategorySection
+localPlayerCategoryButton.BackgroundTransparency = 1
+localPlayerCategoryButton.Position = UDim2.new(0, 0, 0, 0)
+localPlayerCategoryButton.Size = UDim2.new(1, 0, 1, 0)
+localPlayerCategoryButton.Text = ""
+localPlayerCategoryButton.Font = Enum.Font.SourceSans
+localPlayerCategoryButton.TextSize = 1
+
+-- LocalPlayer Expand/Collapse Indicator
+local localPlayerCategoryIndicator = Instance.new("TextLabel")
+localPlayerCategoryIndicator.Name = "LocalPlayerCategoryIndicator"
+localPlayerCategoryIndicator.Parent = localPlayerCategorySection
+localPlayerCategoryIndicator.BackgroundTransparency = 1
+localPlayerCategoryIndicator.Position = UDim2.new(0, 10, 0, 8)
+localPlayerCategoryIndicator.Size = UDim2.new(0, 20, 0, 20)
+localPlayerCategoryIndicator.Font = Enum.Font.Code
+localPlayerCategoryIndicator.Text = "▼"
+localPlayerCategoryIndicator.TextColor3 = colors.text
+localPlayerCategoryIndicator.TextSize = 12
+localPlayerCategoryIndicator.TextXAlignment = Enum.TextXAlignment.Left
+
 -- LocalPlayer Category Header
 local localPlayerCategoryLabel = Instance.new("TextLabel")
 localPlayerCategoryLabel.Name = "LocalPlayerCategoryLabel"
 localPlayerCategoryLabel.Parent = localPlayerCategorySection
 localPlayerCategoryLabel.BackgroundTransparency = 1
-localPlayerCategoryLabel.Position = UDim2.new(0, 10, 0, 8)
-localPlayerCategoryLabel.Size = UDim2.new(0, 270, 0, 20)
+localPlayerCategoryLabel.Position = UDim2.new(0, 35, 0, 8)
+localPlayerCategoryLabel.Size = UDim2.new(0, 245, 0, 20)
 localPlayerCategoryLabel.Font = Enum.Font.Code
 localPlayerCategoryLabel.Text = "LOCALPLAYER"
 localPlayerCategoryLabel.TextColor3 = colors.text
@@ -1035,6 +1087,112 @@ local function disableLinePlayer()
     linePlayerStatusDisplay.Text = "PLAYERS: 0 | STATUS: INACTIVE"
 
     showNotification("LINE_PLAYER_ON_HEAD: DISABLED")
+end
+
+-- Category Collapse/Expand Functions
+local function updateCategoryPositions()
+    local speedSectionY = isMainCategoryCollapsed and 50 or 160
+    local flySectionY = speedSectionY + (isMainCategoryCollapsed and 0 or 110)
+    local jumpSectionY = flySectionY + (isMainCategoryCollapsed and 0 or 90)
+    local quickControlsY = jumpSectionY + (isMainCategoryCollapsed and 0 or 120)
+    local localPlayerY = quickControlsY + (isMainCategoryCollapsed and 0 or 75)
+    local linePlayerY = localPlayerY + (isLocalPlayerCategoryCollapsed and 0 or 50)
+
+    -- Update positions with animation
+    local function updatePosition(element, y)
+        local currentY = element.Position.Y.Offset
+        if currentY ~= y then
+            local tween = TweenService:Create(element, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                Position = UDim2.new(0, 15, 0, y)
+            })
+            tween:Play()
+        end
+    end
+
+    updatePosition(speedSection, speedSectionY)
+    updatePosition(flySection, flySectionY)
+    updatePosition(jumpSection, jumpSectionY)
+    updatePosition(quickControls, quickControlsY)
+    updatePosition(localPlayerCategorySection, localPlayerY)
+    updatePosition(linePlayerSection, linePlayerY)
+
+    -- Update visibility
+    speedSection.Visible = not isMainCategoryCollapsed
+    flySection.Visible = not isMainCategoryCollapsed
+    jumpSection.Visible = not isMainCategoryCollapsed
+    quickControls.Visible = not isMainCategoryCollapsed
+    linePlayerSection.Visible = not isLocalPlayerCategoryCollapsed
+end
+
+local function toggleMainCategory()
+    isMainCategoryCollapsed = not isMainCategoryCollapsed
+
+    -- Animate indicator
+    if isMainCategoryCollapsed then
+        mainCategoryIndicator.Text = "▶"
+        TweenService:Create(mainCategoryIndicator, TweenInfo.new(0.3), {Rotation = 0}):Play()
+    else
+        mainCategoryIndicator.Text = "▼"
+        TweenService:Create(mainCategoryIndicator, TweenInfo.new(0.3), {Rotation = 90}):Play()
+    end
+
+    -- Animate sections
+    local targetVisibility = not isMainCategoryCollapsed
+    local sections = {speedSection, flySection, jumpSection, quickControls}
+
+    if targetVisibility then
+        -- Fade in sections
+        for i, section in ipairs(sections) do
+            section.Visible = true
+            section.BackgroundTransparency = 1
+            local fadeIn = TweenService:Create(section, TweenInfo.new(0.3), {BackgroundTransparency = 0})
+            fadeIn:Play()
+        end
+    else
+        -- Fade out sections
+        for _, section in ipairs(sections) do
+            local fadeOut = TweenService:Create(section, TweenInfo.new(0.3), {BackgroundTransparency = 1})
+            fadeOut:Play()
+            fadeOut.Completed:Connect(function()
+                if isMainCategoryCollapsed then
+                    section.Visible = false
+                end
+            end)
+        end
+    end
+
+    updateCategoryPositions()
+end
+
+local function toggleLocalPlayerCategory()
+    isLocalPlayerCategoryCollapsed = not isLocalPlayerCategoryCollapsed
+
+    -- Animate indicator
+    if isLocalPlayerCategoryCollapsed then
+        localPlayerCategoryIndicator.Text = "▶"
+        TweenService:Create(localPlayerCategoryIndicator, TweenInfo.new(0.3), {Rotation = 0}):Play()
+    else
+        localPlayerCategoryIndicator.Text = "▼"
+        TweenService:Create(localPlayerCategoryIndicator, TweenInfo.new(0.3), {Rotation = 90}):Play()
+    end
+
+    -- Animate line player section
+    if isLocalPlayerCategoryCollapsed then
+        local fadeOut = TweenService:Create(linePlayerSection, TweenInfo.new(0.3), {BackgroundTransparency = 1})
+        fadeOut:Play()
+        fadeOut.Completed:Connect(function()
+            if isLocalPlayerCategoryCollapsed then
+                linePlayerSection.Visible = false
+            end
+        end)
+    else
+        linePlayerSection.Visible = true
+        linePlayerSection.BackgroundTransparency = 1
+        local fadeIn = TweenService:Create(linePlayerSection, TweenInfo.new(0.3), {BackgroundTransparency = 0})
+        fadeIn:Play()
+    end
+
+    updateCategoryPositions()
 end
 
 -- Functions
@@ -1385,6 +1543,15 @@ linePlayerToggleInvisibleButton.MouseButton1Click:Connect(function()
     end
 end)
 
+-- Category button events
+mainCategoryButton.MouseButton1Click:Connect(function()
+    toggleMainCategory()
+end)
+
+localPlayerCategoryButton.MouseButton1Click:Connect(function()
+    toggleLocalPlayerCategory()
+end)
+
 -- Hover Effects
 toggleButton.MouseEnter:Connect(function()
     TweenService:Create(toggleSwitchBg, TweenInfo.new(0.1), {BackgroundColor3 = colors.accent}):Play()
@@ -1472,6 +1639,27 @@ linePlayerToggleInvisibleButton.MouseLeave:Connect(function()
     else
         TweenService:Create(linePlayerToggleSwitchBg, TweenInfo.new(0.1), {BackgroundColor3 = colors.inactive}):Play()
     end
+end)
+
+-- Category button hover effects
+mainCategoryButton.MouseEnter:Connect(function()
+    TweenService:Create(mainCategorySection, TweenInfo.new(0.1), {BackgroundColor3 = colors.tertiary}):Play()
+    mainCategoryIndicator.TextColor3 = colors.active
+end)
+
+mainCategoryButton.MouseLeave:Connect(function()
+    TweenService:Create(mainCategorySection, TweenInfo.new(0.1), {BackgroundColor3 = colors.secondary}):Play()
+    mainCategoryIndicator.TextColor3 = colors.text
+end)
+
+localPlayerCategoryButton.MouseEnter:Connect(function()
+    TweenService:Create(localPlayerCategorySection, TweenInfo.new(0.1), {BackgroundColor3 = colors.tertiary}):Play()
+    localPlayerCategoryIndicator.TextColor3 = colors.active
+end)
+
+localPlayerCategoryButton.MouseLeave:Connect(function()
+    TweenService:Create(localPlayerCategorySection, TweenInfo.new(0.1), {BackgroundColor3 = colors.secondary}):Play()
+    localPlayerCategoryIndicator.TextColor3 = colors.text
 end)
 
 -- Fly Control (FIXED: W now goes forward, S goes backward)
@@ -1650,9 +1838,13 @@ Players.PlayerRemoving:Connect(function(removingPlayer)
     end
 end)
 
+-- Initialize category positions
+updateCategoryPositions()
+
 print("[SYSTEM] .SYSTEM: INITIALIZED")
 print("[KEYBINDS] X:SPEED F:FLY J:INFINITE_JUMP H:HIGH_JUMP L:LINE_PLAYER")
 print("[PANEL] CLICK_LOGO:TOGGLE_PANEL DRAG_HEADER:MOVE_PANEL CTRL+P:RESET_POSITION")
+print("[CATEGORIES] CLICK_CATEGORY_HEADERS:TOGGLE_EXPAND_COLLAPSE")
 print("[RESET] CTRL+R: SYSTEM_RESET")
 print("[SCROLLING] USE_MOUSE_WHEEL_OR_SCROLLBAR")
 print("[FLIGHT_CONTROLS] W:FORWARD S:BACKWARD A:LEFT D:RIGHT SPACE:UP SHIFT:DOWN") 
