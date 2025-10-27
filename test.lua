@@ -1202,7 +1202,7 @@ local function disableLinePlayer()
 end
 
 -- Teleport Functions
-local function createPlayerButton(targetPlayer)
+local function createPlayerButton(targetPlayer, index)
     -- Don't create button for local player (admin)
     if targetPlayer == player then return end
 
@@ -1212,12 +1212,17 @@ local function createPlayerButton(targetPlayer)
         teleportPlayerButtons[targetPlayer] = nil
     end
 
+    -- Calculate Y position based on index
+    local buttonY = (index - 1) * 22
+    print("[TELEPORT_DEBUG] Creating button for " .. targetPlayer.Name .. " at index " .. index .. ", Y position: " .. buttonY)
+
     -- Create new button
     local playerButton = Instance.new("TextButton")
     playerButton.Name = "PlayerButton_" .. targetPlayer.Name
     playerButton.Parent = playerListScroll
     playerButton.BackgroundColor3 = colors.inactive
     playerButton.BorderSizePixel = 0
+    playerButton.Position = UDim2.new(0, 2, 0, buttonY)  -- Position each button below previous one
     playerButton.Size = UDim2.new(1, -4, 0, 20)
     playerButton.Font = Enum.Font.Code
     playerButton.Text = targetPlayer.Name
@@ -1297,17 +1302,30 @@ local function refreshPlayerList()
     selectedPlayerDisplay.Text = "SELECTED: NONE"
     selectedPlayerDisplay.TextColor3 = colors.text_dim
 
-    -- Create buttons for all players except local player
-    local buttonY = 0
-    for _, targetPlayer in ipairs(Players:GetPlayers()) do
+    -- Get all players except local player
+    local otherPlayers = {}
+    local allPlayers = Players:GetPlayers()
+    print("[TELEPORT_DEBUG] Total players found: " .. #allPlayers)
+
+    for _, targetPlayer in ipairs(allPlayers) do
         if targetPlayer ~= player then
-            createPlayerButton(targetPlayer)
-            buttonY = buttonY + 22
+            table.insert(otherPlayers, targetPlayer)
+            print("[TELEPORT_DEBUG] Added player to list: " .. targetPlayer.Name)
+        else
+            print("[TELEPORT_DEBUG] Skipping local player: " .. targetPlayer.Name)
         end
     end
 
-    -- Update canvas size
-    playerListScroll.CanvasSize = UDim2.new(0, 0, 0, buttonY)
+    print("[TELEPORT_DEBUG] Other players count: " .. #otherPlayers)
+
+    -- Create buttons for all other players
+    for i, targetPlayer in ipairs(otherPlayers) do
+        createPlayerButton(targetPlayer, i)
+    end
+
+    -- Update canvas size based on number of players
+    local canvasHeight = #otherPlayers * 22
+    playerListScroll.CanvasSize = UDim2.new(0, 0, 0, canvasHeight)
 end
 
 local function teleportToTargetPlayer()
