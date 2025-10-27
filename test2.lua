@@ -51,10 +51,6 @@ local lineUpdateConnection = nil
 local selectedTeleportPlayer = nil
 local teleportPlayerButtons = {}
 
--- Kick Player variables
-local selectedKickPlayer = nil
-local kickPlayerButtons = {}
-
 -- Carry Player variables
 local selectedCarryPlayers = {}  -- Table untuk menyimpan multiple players yang di-carry
 local carryPlayerButtons = {}
@@ -90,37 +86,50 @@ local logoButton = Instance.new("TextButton")
 logoButton.Name = "LogoButton"
 logoButton.Parent = screenGui
 logoButton.BackgroundColor3 = colors.primary
-logoButton.BackgroundTransparency = 0
 logoButton.BorderSizePixel = 1
 logoButton.BorderColor3 = colors.accent
 logoButton.Position = UDim2.new(1, -60, 0, 20)
 logoButton.Size = logoButtonSize
-logoButton.Text = "JS"
+logoButton.Text = ""
 logoButton.Active = true
 logoButton.Draggable = true
-logoButton.TextColor3 = colors.text
-logoButton.TextScaled = true
-logoButton.Font = Enum.Font.SourceSansBold
-logoButton.TextTransparency = 0
 
 local logoCorner = Instance.new("UICorner")
 logoCorner.CornerRadius = UDim.new(0, 25)
 logoCorner.Parent = logoButton
 
--- Status indicator for panel state
-local logoStatusIndicator = Instance.new("Frame")
-logoStatusIndicator.Name = "LogoStatusIndicator"
-logoStatusIndicator.Parent = logoButton
-logoStatusIndicator.BackgroundColor3 = colors.text_dim
-logoStatusIndicator.BorderSizePixel = 0
-logoStatusIndicator.Position = UDim2.new(1, -8, 0, 8)
-logoStatusIndicator.Size = UDim2.new(0, 6, 0, 6)
+-- Logo Container (for custom logo/text)
+local logoContainer = Instance.new("Frame")
+logoContainer.Name = "LogoContainer"
+logoContainer.Parent = logoButton
+logoContainer.BackgroundTransparency = 1
+logoContainer.Position = UDim2.new(0, 0, 0, 0)
+logoContainer.Size = UDim2.new(1, 0, 1, 0)
 
-local logoStatusCorner = Instance.new("UICorner")
-logoStatusCorner.CornerRadius = UDim.new(0, 3)
-logoStatusCorner.Parent = logoStatusIndicator
+-- Option 1: Custom Text Logo
+local logoText = Instance.new("TextLabel")
+logoText.Name = "LogoText"
+logoText.Parent = logoContainer
+logoText.BackgroundTransparency = 1
+logoText.Position = UDim2.new(0, 0, 0, 0)
+logoText.Size = UDim2.new(1, 0, 1, 0)
+logoText.Font = Enum.Font.GothamBold
+logoText.Text = "JS" -- Juned System initials
+logoText.TextColor3 = colors.text
+logoText.TextSize = 18
+logoText.TextScaled = true
 
--- Main Panel
+-- Option 2: Logo Icon (commented by default, you can enable this)
+--[[
+local logoIcon = Instance.new("ImageLabel")
+logoIcon.Name = "LogoIcon"
+logoIcon.Parent = logoContainer
+logoIcon.BackgroundTransparency = 1
+logoIcon.Position = UDim2.new(0, 10, 0, 10)
+logoIcon.Size = UDim2.new(0, 30, 0, 30)
+logoIcon.Image = "rbxassetid://7733658448" -- Settings/gear icon
+logoIcon.ImageColor3 = colors.text
+--]]
 
 -- Option 3: Combination Text + Icon (commented by default)
 --[[
@@ -145,6 +154,19 @@ logoSmallText.TextColor3 = colors.text
 logoSmallText.TextSize = 12
 --]]
 
+-- Status Indicator on Logo
+local logoStatusIndicator = Instance.new("Frame")
+logoStatusIndicator.Name = "LogoStatusIndicator"
+logoStatusIndicator.Parent = logoButton
+logoStatusIndicator.BackgroundColor3 = colors.text_dim
+logoStatusIndicator.BorderSizePixel = 0
+logoStatusIndicator.Position = UDim2.new(1, -8, 0, 8)
+logoStatusIndicator.Size = UDim2.new(0, 6, 0, 6)
+
+local logoStatusCorner = Instance.new("UICorner")
+logoStatusCorner.CornerRadius = UDim.new(0.5, 0)
+logoStatusCorner.Parent = logoStatusIndicator
+
 -- Main Panel Container (Initially Hidden)
 local mainPanel = Instance.new("Frame")
 mainPanel.Name = "MainPanel"
@@ -152,7 +174,7 @@ mainPanel.Parent = screenGui
 mainPanel.BackgroundColor3 = colors.primary
 mainPanel.BorderSizePixel = 1
 mainPanel.BorderColor3 = colors.accent
-mainPanel.Position = UDim2.new(1, -400, 0, 20)
+mainPanel.Position = UDim2.new(1, -340, 0, 20)
 mainPanel.Size = panelSize
 mainPanel.Visible = false
 mainPanel.Active = true
@@ -992,7 +1014,7 @@ teleportButton.BackgroundColor3 = colors.active
 teleportButton.BorderSizePixel = 1
 teleportButton.BorderColor3 = colors.accent
 teleportButton.Position = UDim2.new(0, 10, 0, 140)
-teleportButton.Size = UDim2.new(0, 175, 0, 25)  -- Reduced size to make room for refresh button
+teleportButton.Size = UDim2.new(0, 270, 0, 25)
 teleportButton.Font = Enum.Font.Code
 teleportButton.Text = "TELEPORT TO PLAYER"
 teleportButton.TextColor3 = colors.text
@@ -1002,24 +1024,6 @@ teleportButton.Active = false  -- Disabled until player is selected
 local teleportButtonCorner = Instance.new("UICorner")
 teleportButtonCorner.CornerRadius = UDim.new(0, 2)
 teleportButtonCorner.Parent = teleportButton
-
--- Refresh Teleport List Button
-local refreshTeleportButton = Instance.new("TextButton")
-refreshTeleportButton.Name = "RefreshTeleportButton"
-refreshTeleportButton.Parent = teleportSection
-refreshTeleportButton.BackgroundColor3 = colors.tertiary
-refreshTeleportButton.BorderSizePixel = 1
-refreshTeleportButton.BorderColor3 = colors.accent
-refreshTeleportButton.Position = UDim2.new(0, 190, 0, 140)
-refreshTeleportButton.Size = UDim2.new(0, 90, 0, 25)
-refreshTeleportButton.Font = Enum.Font.Code
-refreshTeleportButton.Text = "REFRESH LIST"
-refreshTeleportButton.TextColor3 = colors.text
-refreshTeleportButton.TextSize = 9
-
-local refreshTeleportButtonCorner = Instance.new("UICorner")
-refreshTeleportButtonCorner.CornerRadius = UDim.new(0, 2)
-refreshTeleportButtonCorner.Parent = refreshTeleportButton
 
 -- Selected Player Display
 local selectedPlayerDisplay = Instance.new("TextLabel")
@@ -1033,109 +1037,6 @@ selectedPlayerDisplay.Text = "SELECTED: NONE"
 selectedPlayerDisplay.TextColor3 = colors.text_dim
 selectedPlayerDisplay.TextSize = 9
 
--- Kick Player Section (Sub-category of LOCALPLAYER)
-local kickSection = Instance.new("Frame")
-kickSection.Name = "KickSection"
-kickSection.Parent = scrollFrame
-kickSection.BackgroundColor3 = colors.secondary
-kickSection.BorderSizePixel = 1
-kickSection.BorderColor3 = colors.tertiary
-kickSection.Position = UDim2.new(0, 15, 0, 875)  -- Will be positioned by updateCategoryPositions
-kickSection.Size = UDim2.new(0, 290, 0, 180)
-
-local kickCorner = Instance.new("UICorner")
-kickCorner.CornerRadius = UDim.new(0, 3)
-kickCorner.Parent = kickSection
-
--- Kick Section Header
-local kickSectionLabel = Instance.new("TextLabel")
-kickSectionLabel.Name = "KickSectionLabel"
-kickSectionLabel.Parent = kickSection
-kickSectionLabel.BackgroundTransparency = 1
-kickSectionLabel.Position = UDim2.new(0, 10, 0, 5)
-kickSectionLabel.Size = UDim2.new(0, 270, 0, 20)
-kickSectionLabel.Font = Enum.Font.Code
-kickSectionLabel.Text = "{03} KICK_PLAYER"
-kickSectionLabel.TextColor3 = colors.text_dim
-kickSectionLabel.TextSize = 11
-kickSectionLabel.TextXAlignment = Enum.TextXAlignment.Left
-
--- Kick Player List Container
-local kickListContainer = Instance.new("Frame")
-kickListContainer.Name = "KickListContainer"
-kickListContainer.Parent = kickSection
-kickListContainer.BackgroundColor3 = colors.tertiary
-kickListContainer.BorderSizePixel = 0
-kickListContainer.Position = UDim2.new(0, 10, 0, 30)
-kickListContainer.Size = UDim2.new(0, 270, 0, 100)
-
-local kickListCorner = Instance.new("UICorner")
-kickListCorner.CornerRadius = UDim.new(0, 2)
-kickListCorner.Parent = kickListContainer
-
--- Kick Player List ScrollFrame
-local kickListScroll = Instance.new("ScrollingFrame")
-kickListScroll.Name = "KickListScroll"
-kickListScroll.Parent = kickListContainer
-kickListScroll.BackgroundColor3 = colors.tertiary
-kickListScroll.BackgroundTransparency = 0
-kickListScroll.BorderSizePixel = 0
-kickListScroll.Position = UDim2.new(0, 0, 0, 0)
-kickListScroll.Size = UDim2.new(1, 0, 1, 0)
-kickListScroll.ScrollBarThickness = 4
-kickListScroll.ScrollBarImageColor3 = colors.accent
-kickListScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
-kickListScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
-
--- Kick Button
-local kickButton = Instance.new("TextButton")
-kickButton.Name = "KickButton"
-kickButton.Parent = kickSection
-kickButton.BackgroundColor3 = colors.active
-kickButton.BorderSizePixel = 1
-kickButton.BorderColor3 = colors.accent
-kickButton.Position = UDim2.new(0, 10, 0, 140)
-kickButton.Size = UDim2.new(0, 175, 0, 25)  -- Reduced size to make room for refresh button
-kickButton.Font = Enum.Font.Code
-kickButton.Text = "KICK PLAYER INI"
-kickButton.TextColor3 = colors.text
-kickButton.TextSize = 11
-kickButton.Active = false  -- Disabled until player is selected
-
-local kickButtonCorner = Instance.new("UICorner")
-kickButtonCorner.CornerRadius = UDim.new(0, 2)
-kickButtonCorner.Parent = kickButton
-
--- Refresh Kick List Button
-local refreshKickButton = Instance.new("TextButton")
-refreshKickButton.Name = "RefreshKickButton"
-refreshKickButton.Parent = kickSection
-refreshKickButton.BackgroundColor3 = colors.tertiary
-refreshKickButton.BorderSizePixel = 1
-refreshKickButton.BorderColor3 = colors.accent
-refreshKickButton.Position = UDim2.new(0, 190, 0, 140)
-refreshKickButton.Size = UDim2.new(0, 90, 0, 25)
-refreshKickButton.Font = Enum.Font.Code
-refreshKickButton.Text = "REFRESH LIST"
-refreshKickButton.TextColor3 = colors.text
-refreshKickButton.TextSize = 9
-
-local refreshKickButtonCorner = Instance.new("UICorner")
-refreshKickButtonCorner.CornerRadius = UDim.new(0, 2)
-refreshKickButtonCorner.Parent = refreshKickButton
-
--- Selected Kick Player Display
-local selectedKickDisplay = Instance.new("TextLabel")
-selectedKickDisplay.Name = "SelectedKickDisplay"
-selectedKickDisplay.Parent = kickSection
-selectedKickDisplay.BackgroundTransparency = 1
-selectedKickDisplay.Position = UDim2.new(0, 10, 0, 170)
-selectedKickDisplay.Size = UDim2.new(0, 270, 0, 15)
-selectedKickDisplay.Font = Enum.Font.Code
-selectedKickDisplay.Text = "SELECTED: NONE"
-selectedKickDisplay.TextColor3 = colors.text_dim
-selectedKickDisplay.TextSize = 9
-
 -- Carry Player Section (Sub-category of LOCALPLAYER)
 local carrySection = Instance.new("Frame")
 carrySection.Name = "CarrySection"
@@ -1143,8 +1044,8 @@ carrySection.Parent = scrollFrame
 carrySection.BackgroundColor3 = colors.secondary
 carrySection.BorderSizePixel = 1
 carrySection.BorderColor3 = colors.tertiary
-carrySection.Position = UDim2.new(0, 15, 0, 1065)  -- Will be positioned by updateCategoryPositions
-carrySection.Size = UDim2.new(0, 290, 0, 200)
+carrySection.Position = UDim2.new(0, 15, 0, 875)  -- Will be positioned by updateCategoryPositions
+carrySection.Size = UDim2.new(0, 290, 0, 220)
 
 local carryCorner = Instance.new("UICorner")
 carryCorner.CornerRadius = UDim.new(0, 3)
@@ -1158,7 +1059,7 @@ carrySectionLabel.BackgroundTransparency = 1
 carrySectionLabel.Position = UDim2.new(0, 10, 0, 5)
 carrySectionLabel.Size = UDim2.new(0, 270, 0, 20)
 carrySectionLabel.Font = Enum.Font.Code
-carrySectionLabel.Text = "{04} CARRY_PLAYER"
+carrySectionLabel.Text = "{03} CARRY"
 carrySectionLabel.TextColor3 = colors.text_dim
 carrySectionLabel.TextSize = 11
 carrySectionLabel.TextXAlignment = Enum.TextXAlignment.Left
@@ -1190,82 +1091,66 @@ carryListScroll.ScrollBarImageColor3 = colors.accent
 carryListScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
 carryListScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
 
--- Carry Control Buttons Container
-local carryControlContainer = Instance.new("Frame")
-carryControlContainer.Name = "CarryControlContainer"
-carryControlContainer.Parent = carrySection
-carryControlContainer.BackgroundTransparency = 1
-carryControlContainer.Position = UDim2.new(0, 10, 0, 135)
-carryControlContainer.Size = UDim2.new(0, 270, 0, 25)
-
--- Start Carry Button
+-- Carry Control Buttons
 local startCarryButton = Instance.new("TextButton")
 startCarryButton.Name = "StartCarryButton"
-startCarryButton.Parent = carryControlContainer
-startCarryButton.BackgroundColor3 = colors.inactive
+startCarryButton.Parent = carrySection
+startCarryButton.BackgroundColor3 = colors.active
 startCarryButton.BorderSizePixel = 1
 startCarryButton.BorderColor3 = colors.accent
-startCarryButton.Position = UDim2.new(0, 0, 0, 0)
-startCarryButton.Size = UDim2.new(0, 120, 0, 25)
+startCarryButton.Position = UDim2.new(0, 10, 0, 140)
+startCarryButton.Size = UDim2.new(0, 130, 0, 25)
 startCarryButton.Font = Enum.Font.Code
 startCarryButton.Text = "START CARRY"
 startCarryButton.TextColor3 = colors.text
-startCarryButton.TextSize = 10
-startCarryButton.Active = false
+startCarryButton.TextSize = 11
+startCarryButton.Active = false  -- Disabled until players are selected
 
 local startCarryButtonCorner = Instance.new("UICorner")
 startCarryButtonCorner.CornerRadius = UDim.new(0, 2)
 startCarryButtonCorner.Parent = startCarryButton
 
--- Stop Carry Button
 local stopCarryButton = Instance.new("TextButton")
 stopCarryButton.Name = "StopCarryButton"
-stopCarryButton.Parent = carryControlContainer
-stopCarryButton.BackgroundColor3 = colors.tertiary
+stopCarryButton.Parent = carrySection
+stopCarryButton.BackgroundColor3 = colors.inactive
 stopCarryButton.BorderSizePixel = 1
-stopCarryButton.BorderColor3 = colors.accent
-stopCarryButton.Position = UDim2.new(0, 125, 0, 0)
-stopCarryButton.Size = UDim2.new(0, 120, 0, 25)
+stopCarryButton.BorderColor3 = colors.tertiary
+stopCarryButton.Position = UDim2.new(0, 150, 0, 140)
+stopCarryButton.Size = UDim2.new(0, 130, 0, 25)
 stopCarryButton.Font = Enum.Font.Code
 stopCarryButton.Text = "STOP CARRY"
-stopCarryButton.TextColor3 = colors.text
-stopCarryButton.TextSize = 10
-stopCarryButton.Active = false
+stopCarryButton.TextColor3 = colors.text_dim
+stopCarryButton.TextSize = 11
+stopCarryButton.Active = false  -- Disabled when not carrying
 
 local stopCarryButtonCorner = Instance.new("UICorner")
 stopCarryButtonCorner.CornerRadius = UDim.new(0, 2)
 stopCarryButtonCorner.Parent = stopCarryButton
-
--- Refresh Carry Button
-local refreshCarryButton = Instance.new("TextButton")
-refreshCarryButton.Name = "RefreshCarryButton"
-refreshCarryButton.Parent = carrySection
-refreshCarryButton.BackgroundColor3 = colors.tertiary
-refreshCarryButton.BorderSizePixel = 1
-refreshCarryButton.BorderColor3 = colors.accent
-refreshCarryButton.Position = UDim2.new(0, 10, 0, 170)
-refreshCarryButton.Size = UDim2.new(0, 90, 0, 25)
-refreshCarryButton.Font = Enum.Font.Code
-refreshCarryButton.Text = "REFRESH LIST"
-refreshCarryButton.TextColor3 = colors.text
-refreshCarryButton.TextSize = 9
-
-local refreshCarryButtonCorner = Instance.new("UICorner")
-refreshCarryButtonCorner.CornerRadius = UDim.new(0, 2)
-refreshCarryButtonCorner.Parent = refreshCarryButton
 
 -- Selected Carry Players Display
 local selectedCarryDisplay = Instance.new("TextLabel")
 selectedCarryDisplay.Name = "SelectedCarryDisplay"
 selectedCarryDisplay.Parent = carrySection
 selectedCarryDisplay.BackgroundTransparency = 1
-selectedCarryDisplay.Position = UDim2.new(0, 105, 0, 170)
-selectedCarryDisplay.Size = UDim2.new(0, 175, 0, 15)
+selectedCarryDisplay.Position = UDim2.new(0, 10, 0, 170)
+selectedCarryDisplay.Size = UDim2.new(0, 270, 0, 15)
 selectedCarryDisplay.Font = Enum.Font.Code
-selectedCarryDisplay.Text = "SELECTED: 0 PLAYERS"
+selectedCarryDisplay.Text = "SELECTED: NONE"
 selectedCarryDisplay.TextColor3 = colors.text_dim
 selectedCarryDisplay.TextSize = 9
-selectedCarryDisplay.TextXAlignment = Enum.TextXAlignment.Left
+
+-- Carry Status Display
+local carryStatusDisplay = Instance.new("TextLabel")
+carryStatusDisplay.Name = "CarryStatusDisplay"
+carryStatusDisplay.Parent = carrySection
+carryStatusDisplay.BackgroundTransparency = 1
+carryStatusDisplay.Position = UDim2.new(0, 10, 0, 190)
+carryStatusDisplay.Size = UDim2.new(0, 270, 0, 15)
+carryStatusDisplay.Font = Enum.Font.Code
+carryStatusDisplay.Text = "STATUS: IDLE"
+carryStatusDisplay.TextColor3 = colors.text_dim
+carryStatusDisplay.TextSize = 9
 
 -- Line Player Functions
 local function updateLinePlayerToggleSwitch(enabled)
@@ -1625,515 +1510,8 @@ local function teleportToTargetPlayer()
     showNotification("TELEPORT: SUCCESS_TO_" .. selectedTeleportPlayer.Name:upper())
 end
 
--- Kick Player Functions
-local function createKickButton(targetPlayer, index)
-    -- Don't create button for local player (admin)
-    if targetPlayer == player then return end
 
-    -- Remove existing button for this player
-    if kickPlayerButtons[targetPlayer] then
-        kickPlayerButtons[targetPlayer]:Destroy()
-        kickPlayerButtons[targetPlayer] = nil
-    end
 
-    -- Calculate Y position based on index
-    local buttonY = (index - 1) * 22
-    print("[KICK_DEBUG] Creating kick button for " .. targetPlayer.Name .. " at index " .. index .. ", Y position: " .. buttonY)
-
-    -- Create new button
-    local kickPlayerButton = Instance.new("TextButton")
-    kickPlayerButton.Name = "KickButton_" .. targetPlayer.Name
-    kickPlayerButton.Parent = kickListScroll
-    kickPlayerButton.BackgroundColor3 = colors.inactive
-    kickPlayerButton.BorderSizePixel = 0
-    kickPlayerButton.Position = UDim2.new(0, 2, 0, buttonY)  -- Position each button below previous one
-    kickPlayerButton.Size = UDim2.new(1, -4, 0, 20)
-    kickPlayerButton.Font = Enum.Font.Code
-    kickPlayerButton.Text = targetPlayer.Name
-    kickPlayerButton.TextColor3 = colors.text
-    kickPlayerButton.TextSize = 10
-    kickPlayerButton.TextXAlignment = Enum.TextXAlignment.Left
-    kickPlayerButton.TextYAlignment = Enum.TextYAlignment.Center
-
-    local kickButtonCorner = Instance.new("UICorner")
-    kickButtonCorner.CornerRadius = UDim.new(0, 2)
-    kickButtonCorner.Parent = kickPlayerButton
-
-    -- Store reference
-    kickPlayerButtons[targetPlayer] = kickPlayerButton
-
-    -- Click handler
-    kickPlayerButton.MouseButton1Click:Connect(function()
-        print("[KICK_DEBUG] Button clicked for player:", targetPlayer.Name)
-        print("[KICK_DEBUG] Previous selected player:", selectedKickPlayer and selectedKickPlayer.Name or "none")
-
-        -- Deselect previous player
-        if selectedKickPlayer and selectedKickPlayer ~= targetPlayer then
-            if kickPlayerButtons[selectedKickPlayer] then
-                kickPlayerButtons[selectedKickPlayer].BackgroundColor3 = colors.inactive
-                print("[KICK_DEBUG] Deselected previous player:", selectedKickPlayer.Name)
-            end
-        end
-
-        -- Select new player
-        selectedKickPlayer = targetPlayer
-        kickPlayerButton.BackgroundColor3 = colors.active
-        kickButton.Active = true
-        kickButton.BackgroundColor3 = colors.active
-        selectedKickDisplay.Text = "SELECTED: " .. targetPlayer.Name
-        selectedKickDisplay.TextColor3 = colors.text
-
-        print("[KICK_DEBUG] Selected new player:", targetPlayer.Name)
-        print("[KICK_DEBUG] Kick button active:", kickButton.Active)
-    end)
-
-    -- Hover effects
-    kickPlayerButton.MouseEnter:Connect(function()
-        if selectedKickPlayer ~= targetPlayer then
-            TweenService:Create(kickPlayerButton, TweenInfo.new(0.1), {BackgroundColor3 = colors.tertiary}):Play()
-        end
-    end)
-
-    kickPlayerButton.MouseLeave:Connect(function()
-        if selectedKickPlayer ~= targetPlayer then
-            TweenService:Create(kickPlayerButton, TweenInfo.new(0.1), {BackgroundColor3 = colors.inactive}):Play()
-        end
-    end)
-end
-
-local function removeKickButton(targetPlayer)
-    if kickPlayerButtons[targetPlayer] then
-        kickPlayerButtons[targetPlayer]:Destroy()
-        kickPlayerButtons[targetPlayer] = nil
-
-        -- Clear selection if this player was selected
-        if selectedKickPlayer == targetPlayer then
-            selectedKickPlayer = nil
-            kickButton.Active = false
-            kickButton.BackgroundColor3 = colors.inactive
-            selectedKickDisplay.Text = "SELECTED: NONE"
-            selectedKickDisplay.TextColor3 = colors.text_dim
-        end
-    end
-end
-
-local function refreshKickPlayerList()
-    print("[KICK_DEBUG] === Starting refreshKickPlayerList ===")
-
-    -- Clear existing buttons
-    print("[KICK_DEBUG] Clearing existing buttons...")
-    for _, button in pairs(kickPlayerButtons) do
-        if button then
-            button:Destroy()
-        end
-    end
-    kickPlayerButtons = {}
-    print("[KICK_DEBUG] Cleared", #kickPlayerButtons, "buttons")
-
-    -- Clear selection
-    selectedKickPlayer = nil
-    kickButton.Active = false
-    kickButton.BackgroundColor3 = colors.inactive
-    selectedKickDisplay.Text = "SELECTED: NONE"
-    selectedKickDisplay.TextColor3 = colors.text_dim
-
-    -- Get all players except local player
-    local otherPlayers = {}
-    local allPlayers = Players:GetPlayers()
-    print("[KICK_DEBUG] Total players found: " .. #allPlayers)
-
-    for _, targetPlayer in ipairs(allPlayers) do
-        if targetPlayer ~= player then
-            table.insert(otherPlayers, targetPlayer)
-            print("[KICK_DEBUG] Added player to kick list: " .. targetPlayer.Name)
-        else
-            print("[KICK_DEBUG] Skipping local player: " .. targetPlayer.Name)
-        end
-    end
-
-    print("[KICK_DEBUG] Other players count for kick: " .. #otherPlayers)
-
-    -- Create buttons for all other players
-    for i, targetPlayer in ipairs(otherPlayers) do
-        print("[KICK_DEBUG] Creating kick button for:", targetPlayer.Name, "at index", i)
-        createKickButton(targetPlayer, i)
-    end
-
-    -- Final state check
-    print("[KICK_DEBUG] Total kick buttons created:", #otherPlayers)
-    print("[KICK_DEBUG] Final kickPlayerButtons table size:", table.getn(kickPlayerButtons) or "unknown")
-
-    -- Update canvas size based on number of players
-    local canvasHeight = #otherPlayers * 22
-    kickListScroll.CanvasSize = UDim2.new(0, 0, 0, canvasHeight)
-    print("[KICK_DEBUG] Set canvas height to:", canvasHeight)
-    print("[KICK_DEBUG] === refreshKickPlayerList completed ===")
-end
-
-local function kickSelectedPlayer()
-    print("[KICK_DEBUG] Starting kick function...")
-
-    if not selectedKickPlayer then
-        print("[KICK_DEBUG] No player selected!")
-        showNotification("KICK: NO_PLAYER_SELECTED")
-        return
-    end
-
-    print("[KICK_DEBUG] Selected player:", selectedKickPlayer.Name)
-    print("[KICK_DEBUG] Selected player type:", typeof(selectedKickPlayer))
-    print("[KICK_DEBUG] Selected player Parent:", selectedKickPlayer.Parent)
-
-    -- Check if target player exists and is valid
-    if not selectedKickPlayer.Parent or not selectedKickPlayer:IsA("Player") then
-        print("[KICK_DEBUG] Player not found or invalid!")
-        showNotification("KICK: PLAYER_NOT_FOUND")
-        selectedKickPlayer = nil
-        kickButton.Active = false
-        kickButton.BackgroundColor3 = colors.inactive
-        selectedKickDisplay.Text = "SELECTED: NONE"
-        selectedKickDisplay.TextColor3 = colors.text_dim
-        refreshKickPlayerList()
-        return
-    end
-
-    -- Prevent kicking local player (self-kick protection)
-    if selectedKickPlayer == player then
-        print("[KICK_DEBUG] Attempted self-kick, blocked!")
-        showNotification("KICK: CANNOT_KICK_SELF")
-        return
-    end
-
-    -- Get target info for notifications
-    local targetName = selectedKickPlayer.Name
-    local targetUserId = selectedKickPlayer.UserId
-
-    print("[KICK_DEBUG] Starting kick operation for:", targetName, "ID:", targetUserId)
-
-    -- Confirm kick with notification
-    showNotification("KICK: STARTING_KICK_" .. targetName:upper())
-
-    -- Perform kick (use pcall for safety with detailed error handling)
-    local success, errorMsg = pcall(function()
-        print("[KICK_DEBUG] Calling :Kick() method on player...")
-        selectedKickPlayer:Kick("ADMIN_KICK")
-        print("[KICK_DEBUG] :Kick() method completed")
-    end)
-
-    print("[KICK_DEBUG] Kick operation result - Success:", success)
-    print("[KICK_DEBUG] Error message if any:", errorMsg)
-
-    if success then
-        print("[KICK_DEBUG] Kick successful!")
-
-        -- Clear selection state immediately
-        selectedKickPlayer = nil
-        kickButton.Active = false
-        kickButton.BackgroundColor3 = colors.inactive
-        selectedKickDisplay.Text = "SELECTED: NONE"
-        selectedKickDisplay.TextColor3 = colors.text_dim
-
-        -- Success notification
-        showNotification("KICK: SUCCESS_" .. targetName:upper() .. "_KICKED")
-
-        -- Wait a moment then refresh list to show updated player count
-        task.wait(0.5)
-        print("[KICK_DEBUG] Refreshing kick player list...")
-        refreshKickPlayerList()
-    else
-        -- Detailed error reporting
-        local errorInfo = tostring(errorMsg) or "UNKNOWN_ERROR"
-        print("[KICK_DEBUG] Kick failed with error:", errorInfo)
-
-        showNotification("KICK: FAILED_" .. targetName:upper() .. "_ERROR")
-
-        -- Refresh list anyway in case player left during operation
-        task.wait(0.3)
-        refreshKickPlayerList()
-    end
-end
-
--- Carry Player Functions
-local function createCarryButton(targetPlayer, index)
-    -- Don't create button for local player (admin)
-    if targetPlayer == player then return end
-
-    -- Remove existing button for this player
-    if carryPlayerButtons[targetPlayer] then
-        carryPlayerButtons[targetPlayer]:Destroy()
-        carryPlayerButtons[targetPlayer] = nil
-    end
-
-    -- Calculate Y position based on index
-    local buttonY = (index - 1) * 22
-    print("[CARRY_DEBUG] Creating carry button for " .. targetPlayer.Name .. " at index " .. index .. ", Y position: " .. buttonY)
-
-    -- Create new button
-    local carryPlayerButton = Instance.new("TextButton")
-    carryPlayerButton.Name = "CarryButton_" .. targetPlayer.Name
-    carryPlayerButton.Parent = carryListScroll
-    carryPlayerButton.BackgroundColor3 = colors.inactive
-    carryPlayerButton.BorderSizePixel = 0
-    carryPlayerButton.Position = UDim2.new(0, 2, 0, buttonY)
-    carryPlayerButton.Size = UDim2.new(1, -4, 0, 20)
-    carryPlayerButton.Font = Enum.Font.Code
-    carryPlayerButton.Text = targetPlayer.Name
-    carryPlayerButton.TextColor3 = colors.text
-    carryPlayerButton.TextSize = 10
-    carryPlayerButton.TextXAlignment = Enum.TextXAlignment.Left
-    carryPlayerButton.TextYAlignment = Enum.TextYAlignment.Center
-
-    local carryButtonCorner = Instance.new("UICorner")
-    carryButtonCorner.CornerRadius = UDim.new(0, 2)
-    carryButtonCorner.Parent = carryPlayerButton
-
-    -- Store reference
-    carryPlayerButtons[targetPlayer] = carryPlayerButton
-
-    -- Update button appearance based on selection state
-    local function updateButtonAppearance()
-        if selectedCarryPlayers[targetPlayer] then
-            carryPlayerButton.BackgroundColor3 = colors.active
-            carryPlayerButton.Text = targetPlayer.Name .. " [CARRYING]"
-        else
-            carryPlayerButton.BackgroundColor3 = colors.inactive
-            carryPlayerButton.Text = targetPlayer.Name
-        end
-    end
-
-    -- Initial appearance update
-    updateButtonAppearance()
-
-    -- Click handler (toggle selection)
-    carryPlayerButton.MouseButton1Click:Connect(function()
-        print("[CARRY_DEBUG] Button clicked for player:", targetPlayer.Name)
-        print("[CARRY_DEBUG] Currently selected count:", #selectedCarryPlayers)
-
-        if selectedCarryPlayers[targetPlayer] then
-            -- Remove from selection
-            selectedCarryPlayers[targetPlayer] = nil
-            print("[CARRY_DEBUG] Removed from selection")
-        else
-            -- Add to selection
-            selectedCarryPlayers[targetPlayer] = targetPlayer
-            print("[CARRY_DEBUG] Added to selection")
-        end
-
-        -- Update button appearance
-        updateButtonAppearance()
-
-        -- Update start button state
-        local selectedCount = 0
-        for _ in pairs(selectedCarryPlayers) do
-            selectedCount = selectedCount + 1
-        end
-
-        startCarryButton.Active = selectedCount > 0
-        startCarryButton.BackgroundColor3 = selectedCount > 0 and colors.active or colors.inactive
-
-        -- Update display
-        selectedCarryDisplay.Text = "SELECTED: " .. selectedCount .. " PLAYER" .. (selectedCount ~= 1 and "S" or "")
-        selectedCarryDisplay.TextColor3 = selectedCount > 0 and colors.text or colors.text_dim
-
-        print("[CARRY_DEBUG] Final selected count:", selectedCount)
-    end)
-
-    -- Hover effects
-    carryPlayerButton.MouseEnter:Connect(function()
-        if not selectedCarryPlayers[targetPlayer] then
-            TweenService:Create(carryPlayerButton, TweenInfo.new(0.1), {BackgroundColor3 = colors.tertiary}):Play()
-        end
-    end)
-
-    carryPlayerButton.MouseLeave:Connect(function()
-        if not selectedCarryPlayers[targetPlayer] then
-            TweenService:Create(carryPlayerButton, TweenInfo.new(0.1), {BackgroundColor3 = colors.inactive}):Play()
-        end
-    end)
-end
-
-local function removeCarryButton(targetPlayer)
-    if carryPlayerButtons[targetPlayer] then
-        carryPlayerButtons[targetPlayer]:Destroy()
-        carryPlayerButtons[targetPlayer] = nil
-
-        -- Remove from selection if this player was selected
-        if selectedCarryPlayers[targetPlayer] then
-            selectedCarryPlayers[targetPlayer] = nil
-
-            -- Update start button state
-            local selectedCount = 0
-            for _ in pairs(selectedCarryPlayers) do
-                selectedCount = selectedCount + 1
-            end
-
-            startCarryButton.Active = selectedCount > 0
-            startCarryButton.BackgroundColor3 = selectedCount > 0 and colors.active or colors.inactive
-
-            -- Update display
-            selectedCarryDisplay.Text = "SELECTED: " .. selectedCount .. " PLAYER" .. (selectedCount ~= 1 and "S" or "")
-            selectedCarryDisplay.TextColor3 = selectedCount > 0 and colors.text or colors.text_dim
-        end
-    end
-end
-
-local function refreshCarryPlayerList()
-    print("[CARRY_DEBUG] === Starting refreshCarryPlayerList ===")
-
-    -- Clear existing buttons
-    print("[CARRY_DEBUG] Clearing existing buttons...")
-    for _, button in pairs(carryPlayerButtons) do
-        if button then
-            button:Destroy()
-        end
-    end
-    carryPlayerButtons = {}
-    print("[CARRY_DEBUG] Cleared all buttons")
-
-    -- Get all players except local player
-    local otherPlayers = {}
-    local allPlayers = Players:GetPlayers()
-    print("[CARRY_DEBUG] Total players found: " .. #allPlayers)
-
-    for _, targetPlayer in ipairs(allPlayers) do
-        if targetPlayer ~= player then
-            table.insert(otherPlayers, targetPlayer)
-            print("[CARRY_DEBUG] Added player to carry list: " .. targetPlayer.Name)
-        else
-            print("[CARRY_DEBUG] Skipping local player: " .. targetPlayer.Name)
-        end
-    end
-
-    print("[CARRY_DEBUG] Other players count for carry: " .. #otherPlayers)
-
-    -- Create buttons for all other players
-    for i, targetPlayer in ipairs(otherPlayers) do
-        print("[CARRY_DEBUG] Creating carry button for:", targetPlayer.Name, "at index", i)
-        createCarryButton(targetPlayer, i)
-    end
-
-    -- Update canvas size based on number of players
-    local canvasHeight = #otherPlayers * 22
-    carryListScroll.CanvasSize = UDim2.new(0, 0, 0, canvasHeight)
-    print("[CARRY_DEBUG] Set canvas height to:", canvasHeight)
-    print("[CARRY_DEBUG] === refreshCarryPlayerList completed ===")
-end
-
-local function startCarryingPlayers()
-    local selectedCount = 0
-    for _ in pairs(selectedCarryPlayers) do
-        selectedCount = selectedCount + 1
-    end
-
-    if selectedCount == 0 then
-        showNotification("CARRY: NO_PLAYERS_SELECTED")
-        return
-    end
-
-    if isCarryModeActive then
-        showNotification("CARRY: ALREADY_ACTIVE")
-        return
-    end
-
-    print("[CARRY_DEBUG] Starting carry mode with", selectedCount, "players")
-
-    isCarryModeActive = true
-    startCarryButton.Active = false
-    startCarryButton.BackgroundColor3 = colors.inactive
-    stopCarryButton.Active = true
-    stopCarryButton.BackgroundColor3 = colors.active
-
-    showNotification("CARRY: STARTED_WITH_" .. selectedCount .. "_PLAYERS")
-
-    -- Start heartbeat connection for continuous carry
-    carryConnections.heartbeat = RunService.Heartbeat:Connect(function()
-        if not isCarryModeActive then return end
-
-        local adminCharacter = player.Character
-        if not adminCharacter then return end
-
-        local adminHumanoidRootPart = adminCharacter:FindFirstChild("HumanoidRootPart")
-        if not adminHumanoidRootPart then return end
-
-        local adminCFrame = adminHumanoidRootPart.CFrame
-
-        -- Position each selected player relative to admin
-        for targetPlayer, _ in pairs(selectedCarryPlayers) do
-            if targetPlayer and targetPlayer.Character then
-                local targetCharacter = targetPlayer.Character
-                local targetHumanoidRootPart = targetCharacter:FindFirstChild("HumanoidRootPart")
-
-                if targetHumanoidRootPart then
-                    -- Calculate offset position (spread players around admin)
-                    local playerIndex = 0
-                    for i, p in ipairs(Players:GetPlayers()) do
-                        if p == targetPlayer then
-                            playerIndex = i - 1  -- Subtract 1 because we skip admin
-                            break
-                        end
-                    end
-
-                    -- Create circular formation around admin
-                    local angle = (playerIndex / selectedCount) * math.pi * 2
-                    local radius = math.min(selectedCount * 2, 8)  -- Max radius of 8 studs
-                    local offsetX = math.cos(angle) * radius
-                    local offsetZ = math.sin(angle) * radius
-
-                    local targetCFrame = adminCFrame * CFrame.new(offsetX, carryOffset.Y, offsetZ)
-
-                    -- Smooth movement
-                    targetHumanoidRootPart.CFrame = targetHumanoidRootPart.CFrame:Lerp(targetCFrame, 0.3)
-
-                    -- Freeze player movement
-                    local targetHumanoid = targetCharacter:FindFirstChild("Humanoid")
-                    if targetHumanoid then
-                        targetHumanoid.WalkSpeed = 0
-                        targetHumanoid.JumpPower = 0
-                    end
-                end
-            end
-        end
-    end)
-end
-
-local function stopCarryingPlayers()
-    if not isCarryModeActive then
-        showNotification("CARRY: NOT_ACTIVE")
-        return
-    end
-
-    print("[CARRY_DEBUG] Stopping carry mode")
-
-    isCarryModeActive = false
-    startCarryButton.Active = true
-    startCarryButton.BackgroundColor3 = colors.active
-    stopCarryButton.Active = false
-    stopCarryButton.BackgroundColor3 = colors.inactive
-
-    -- Stop heartbeat connection
-    if carryConnections.heartbeat then
-        carryConnections.heartbeat:Disconnect()
-        carryConnections.heartbeat = nil
-    end
-
-    -- Restore player movement
-    for targetPlayer, _ in pairs(selectedCarryPlayers) do
-        if targetPlayer and targetPlayer.Character then
-            local targetCharacter = targetPlayer.Character
-            local targetHumanoid = targetCharacter:FindFirstChild("Humanoid")
-            if targetHumanoid then
-                targetHumanoid.WalkSpeed = 16  -- Restore default speed
-                targetHumanoid.JumpPower = 50  -- Restore default jump
-            end
-        end
-    end
-
-    local selectedCount = 0
-    for _ in pairs(selectedCarryPlayers) do
-        selectedCount = selectedCount + 1
-    end
-
-    showNotification("CARRY: STOPPED_" .. selectedCount .. "_PLAYERS")
-end
 
 -- Category Collapse/Expand Functions
 local function updateCategoryPositions()
@@ -2144,8 +1522,7 @@ local function updateCategoryPositions()
     local localPlayerY = quickControlsY + (isMainCategoryCollapsed and 0 or 75)
     local linePlayerY = localPlayerY + (isLocalPlayerCategoryCollapsed and 0 or 50)
     local teleportY = linePlayerY + (isLocalPlayerCategoryCollapsed and 0 or 85)
-    local kickY = teleportY + (isLocalPlayerCategoryCollapsed and 0 or 190)
-    local carryY = kickY + (isLocalPlayerCategoryCollapsed and 0 or 205)
+    local carryY = teleportY + (isLocalPlayerCategoryCollapsed and 0 or 220)
 
     -- Update positions with animation
     local function updatePosition(element, y)
@@ -2165,10 +1542,7 @@ local function updateCategoryPositions()
     updatePosition(localPlayerCategorySection, localPlayerY)
     updatePosition(linePlayerSection, linePlayerY)
     updatePosition(teleportSection, teleportY)
-    updatePosition(kickSection, kickY)
     updatePosition(carrySection, carryY)
-
-    -- Refresh buttons are children of sections, so they move with their parent sections
 
     -- Update visibility
     speedSection.Visible = not isMainCategoryCollapsed
@@ -2177,11 +1551,7 @@ local function updateCategoryPositions()
     quickControls.Visible = not isMainCategoryCollapsed
     linePlayerSection.Visible = not isLocalPlayerCategoryCollapsed
     teleportSection.Visible = not isLocalPlayerCategoryCollapsed
-    refreshTeleportButton.Visible = not isLocalPlayerCategoryCollapsed
-    kickSection.Visible = not isLocalPlayerCategoryCollapsed
-    refreshKickButton.Visible = not isLocalPlayerCategoryCollapsed
     carrySection.Visible = not isLocalPlayerCategoryCollapsed
-    refreshCarryButton.Visible = not isLocalPlayerCategoryCollapsed
 end
 
 local function toggleMainCategory()
@@ -2251,25 +1621,14 @@ local function toggleLocalPlayerCategory()
         fadeOut2.Completed:Connect(function()
             if isLocalPlayerCategoryCollapsed then
                 teleportSection.Visible = false
-                refreshTeleportButton.Visible = false
             end
         end)
 
-        local fadeOut3 = TweenService:Create(kickSection, TweenInfo.new(0.3), {BackgroundTransparency = 1})
+        local fadeOut3 = TweenService:Create(carrySection, TweenInfo.new(0.3), {BackgroundTransparency = 1})
         fadeOut3:Play()
         fadeOut3.Completed:Connect(function()
             if isLocalPlayerCategoryCollapsed then
-                kickSection.Visible = false
-                refreshKickButton.Visible = false
-            end
-        end)
-
-        local fadeOut4 = TweenService:Create(carrySection, TweenInfo.new(0.3), {BackgroundTransparency = 1})
-        fadeOut4:Play()
-        fadeOut4.Completed:Connect(function()
-            if isLocalPlayerCategoryCollapsed then
                 carrySection.Visible = false
-                refreshCarryButton.Visible = false
             end
         end)
     else
@@ -2280,21 +1639,13 @@ local function toggleLocalPlayerCategory()
 
         teleportSection.Visible = true
         teleportSection.BackgroundTransparency = 1
-        refreshTeleportButton.Visible = true
         local fadeIn2 = TweenService:Create(teleportSection, TweenInfo.new(0.3), {BackgroundTransparency = 0})
         fadeIn2:Play()
 
-        kickSection.Visible = true
-        kickSection.BackgroundTransparency = 1
-        refreshKickButton.Visible = true
-        local fadeIn3 = TweenService:Create(kickSection, TweenInfo.new(0.3), {BackgroundTransparency = 0})
-        fadeIn3:Play()
-
         carrySection.Visible = true
         carrySection.BackgroundTransparency = 1
-        refreshCarryButton.Visible = true
-        local fadeIn4 = TweenService:Create(carrySection, TweenInfo.new(0.3), {BackgroundTransparency = 0})
-        fadeIn4:Play()
+        local fadeIn3 = TweenService:Create(carrySection, TweenInfo.new(0.3), {BackgroundTransparency = 0})
+        fadeIn3:Play()
     end
 
     updateCategoryPositions()
@@ -2302,22 +1653,17 @@ end
 
 -- Functions
 local function togglePanelVisibility()
-    print("[PANEL_DEBUG] togglePanelVisibility() called")
     isPanelVisible = not isPanelVisible
-    print("[PANEL_DEBUG] New visibility state:", isPanelVisible)
 
     if isPanelVisible then
         -- Show panel
-        print("[PANEL_DEBUG] Showing panel...")
         mainPanel.Visible = true
 
         -- Position panel relative to logo button (only if not already positioned)
         local currentX = mainPanel.Position.X.Offset
         local currentY = mainPanel.Position.Y.Offset
-        print("[PANEL_DEBUG] Current panel position: X =", currentX, "Y =", currentY)
-        if currentX == -340 or currentX == -400 and currentY == 20 then
+        if currentX == -340 and currentY == 20 then
             local logoPos = logoButton.Position
-            print("[PANEL_DEBUG] Repositioning panel relative to logo at:", logoPos.X.Offset, logoPos.Y.Offset)
             mainPanel.Position = UDim2.new(logoPos.X.Scale, logoPos.X.Offset - 280, logoPos.Y.Scale, logoPos.Y.Offset + 60)
         end
 
@@ -2328,8 +1674,8 @@ local function togglePanelVisibility()
             task.wait(0.02)
         end
 
-        -- Rotate logo button to indicate active state
-        TweenService:Create(logoButton, TweenInfo.new(0.3), {Rotation = 45}):Play()
+        -- Rotate logo container to indicate active state
+        TweenService:Create(logoContainer, TweenInfo.new(0.3), {Rotation = 90}):Play()
 
         -- Update logo status indicator
         logoStatusIndicator.BackgroundColor3 = colors.text
@@ -2338,12 +1684,11 @@ local function togglePanelVisibility()
         showNotification("PANEL_STATE: VISIBLE")
     else
         -- Hide panel
-        print("[PANEL_DEBUG] Hiding panel...")
         mainPanel.BackgroundTransparency = 1
         mainPanel.Visible = false
 
-        -- Rotate logo button back to normal
-        TweenService:Create(logoButton, TweenInfo.new(0.3), {Rotation = 0}):Play()
+        -- Rotate logo container back to normal
+        TweenService:Create(logoContainer, TweenInfo.new(0.3), {Rotation = 0}):Play()
 
         -- Update logo status indicator
         logoStatusIndicator.BackgroundColor3 = colors.text_dim
@@ -2569,24 +1914,237 @@ local function disableHighJump()
     showNotification("AMPLIFIED_JUMP: DISABLED")
 end
 
+-- Carry Player Functions
+local function createCarryPlayerButton(targetPlayer, index)
+    if not targetPlayer or not targetPlayer.Character then return end
+
+    local buttonY = (index - 1) * 22
+
+    local button = Instance.new("TextButton")
+    button.Name = "CarryPlayer_" .. targetPlayer.Name
+    button.Parent = carryListScroll
+    button.BackgroundColor3 = colors.inactive
+    button.BorderSizePixel = 1
+    button.BorderColor3 = colors.tertiary
+    button.Position = UDim2.new(0, 5, 0, buttonY)
+    button.Size = UDim2.new(0, 250, 0, 20)
+    button.Font = Enum.Font.Code
+    button.Text = targetPlayer.Name
+    button.TextColor3 = colors.text_dim
+    button.TextSize = 10
+    button.TextXAlignment = Enum.TextXAlignment.Left
+    button.ZIndex = 2
+
+    local buttonCorner = Instance.new("UICorner")
+    buttonCorner.CornerRadius = UDim.new(0, 2)
+    buttonCorner.Parent = button
+
+    -- Selection indicator
+    local selectIndicator = Instance.new("Frame")
+    selectIndicator.Name = "SelectIndicator"
+    selectIndicator.Parent = button
+    selectIndicator.BackgroundColor3 = colors.active
+    selectIndicator.BorderSizePixel = 0
+    selectIndicator.Position = UDim2.new(1, -20, 0, 2)
+    selectIndicator.Size = UDim2.new(0, 16, 0, 16)
+    selectIndicator.Visible = false
+
+    local indicatorCorner = Instance.new("UICorner")
+    indicatorCorner.CornerRadius = UDim.new(0, 8)
+    indicatorCorner.Parent = selectIndicator
+
+    -- Click handler for multi-select
+    button.MouseButton1Click:Connect(function()
+        -- Check if player is already selected
+        local isSelected = false
+        local selectedIndex = -1
+
+        for i, player in ipairs(selectedCarryPlayers) do
+            if player == targetPlayer then
+                isSelected = true
+                selectedIndex = i
+                break
+            end
+        end
+
+        if isSelected then
+            -- Remove from selection
+            table.remove(selectedCarryPlayers, selectedIndex)
+            selectIndicator.Visible = false
+            button.BackgroundColor3 = colors.inactive
+            button.TextColor3 = colors.text_dim
+        else
+            -- Add to selection
+            table.insert(selectedCarryPlayers, targetPlayer)
+            selectIndicator.Visible = true
+            button.BackgroundColor3 = colors.active
+            button.TextColor3 = colors.text
+        end
+
+        -- Update display
+        local selectedCount = #selectedCarryPlayers
+        if selectedCount == 0 then
+            selectedCarryDisplay.Text = "SELECTED: NONE"
+            startCarryButton.Active = false
+            startCarryButton.BackgroundColor3 = colors.active
+        else
+            selectedCarryDisplay.Text = "SELECTED: " .. selectedCount .. " PLAYER(S)"
+            startCarryButton.Active = true
+            startCarryButton.BackgroundColor3 = colors.active
+        end
+    end)
+
+    -- Hover effects
+    button.MouseEnter:Connect(function()
+        if button.BackgroundColor3 == colors.inactive then
+            TweenService:Create(button, TweenInfo.new(0.1), {BackgroundColor3 = colors.tertiary}):Play()
+        end
+    end)
+
+    button.MouseLeave:Connect(function()
+        if button.BackgroundColor3 == colors.tertiary then
+            TweenService:Create(button, TweenInfo.new(0.1), {BackgroundColor3 = colors.inactive}):Play()
+        end
+    end)
+
+    table.insert(carryPlayerButtons, button)
+    return button
+end
+
+local function refreshCarryPlayerList()
+    -- Clear existing buttons
+    for _, button in ipairs(carryPlayerButtons) do
+        if button then
+            button:Destroy()
+        end
+    end
+    carryPlayerButtons = {}
+
+    -- Get all players except local player
+    local allPlayers = Players:GetPlayers()
+    local otherPlayers = {}
+
+    for _, targetPlayer in ipairs(allPlayers) do
+        if targetPlayer ~= player then
+            table.insert(otherPlayers, targetPlayer)
+        end
+    end
+
+    -- Create buttons for other players
+    for i, targetPlayer in ipairs(otherPlayers) do
+        if targetPlayer and targetPlayer.Character then
+            createCarryPlayerButton(targetPlayer, i)
+        end
+    end
+
+    -- Update canvas size
+    local canvasHeight = #otherPlayers * 22
+    carryListScroll.CanvasSize = UDim2.new(0, 0, 0, canvasHeight)
+
+    -- Reset selection display
+    selectedCarryPlayers = {}
+    selectedCarryDisplay.Text = "SELECTED: NONE"
+    startCarryButton.Active = false
+end
+
+local function startCarryingPlayers()
+    if #selectedCarryPlayers == 0 or isCarryModeActive then return end
+
+    isCarryModeActive = true
+    startCarryButton.Active = false
+    startCarryButton.BackgroundColor3 = colors.inactive
+    stopCarryButton.Active = true
+    stopCarryButton.BackgroundColor3 = colors.active
+    carryStatusDisplay.Text = "STATUS: CARRYING"
+    carryStatusDisplay.TextColor3 = colors.text
+
+    showNotification("CARRY_MODE: STARTED (" .. #selectedCarryPlayers .. " PLAYERS)")
+
+    -- Function to update carried players positions
+    local function updateCarryPositions()
+        if not isCarryModeActive or not character or not character:FindFirstChild("HumanoidRootPart") then
+            return
+        end
+
+        local adminRootPart = character.HumanoidRootPart
+        local adminPosition = adminRootPart.Position
+
+        -- Update each carried player
+        for i, targetPlayer in ipairs(selectedCarryPlayers) do
+            if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                local targetRootPart = targetPlayer.Character.HumanoidRootPart
+
+                -- Calculate circular formation around admin
+                local angle = (i / #selectedCarryPlayers) * math.pi * 2
+                local radius = 4 + (#selectedCarryPlayers * 0.5) -- Dynamic radius based on player count
+                local offsetX = math.cos(angle) * radius
+                local offsetZ = math.sin(angle) * radius
+
+                -- Set position with offset
+                targetRootPart.CFrame = CFrame.new(adminPosition + Vector3.new(offsetX, carryOffset.Y, offsetZ))
+
+                -- Disable player movement (freeze them)
+                if targetPlayer.Character:FindFirstChild("Humanoid") then
+                    local targetHumanoid = targetPlayer.Character.Humanoid
+                    targetHumanoid.WalkSpeed = 0
+                    targetHumanoid.JumpPower = 0
+                    targetHumanoid.PlatformStand = true
+                end
+            end
+        end
+    end
+
+    -- Start heartbeat connection for continuous carry
+    local carryConnection = RunService.Heartbeat:Connect(updateCarryPositions)
+    table.insert(carryConnections, carryConnection)
+end
+
+local function stopCarryingPlayers()
+    if not isCarryModeActive then return end
+
+    isCarryModeActive = false
+    startCarryButton.Active = (#selectedCarryPlayers > 0)
+    startCarryButton.BackgroundColor3 = colors.active
+    stopCarryButton.Active = false
+    stopCarryButton.BackgroundColor3 = colors.inactive
+    carryStatusDisplay.Text = "STATUS: IDLE"
+    carryStatusDisplay.TextColor3 = colors.text_dim
+
+    -- Restore player movement
+    for _, targetPlayer in ipairs(selectedCarryPlayers) do
+        if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("Humanoid") then
+            local targetHumanoid = targetPlayer.Character.Humanoid
+            targetHumanoid.WalkSpeed = 16  -- Default walk speed
+            targetHumanoid.JumpPower = 50  -- Default jump power
+            targetHumanoid.PlatformStand = false
+        end
+    end
+
+    -- Clear carry connections
+    for _, connection in ipairs(carryConnections) do
+        if connection then
+            connection:Disconnect()
+        end
+    end
+    carryConnections = {}
+
+    showNotification("CARRY_MODE: STOPPED")
+end
+
 -- Button Events
 -- Logo button for show/hide panel
 logoButton.MouseButton1Click:Connect(function()
-    print("[LOGO_DEBUG] Logo button clicked!")
-    print("[LOGO_DEBUG] Current panel visibility:", isPanelVisible)
-    print("[LOGO_DEBUG] Logo button exists:", logoButton and "YES" or "NO")
-    print("[LOGO_DEBUG] Main panel exists:", mainPanel and "YES" or "NO")
     togglePanelVisibility()
 end)
 
 -- Logo button hover effects
 logoButton.MouseEnter:Connect(function()
-    TweenService:Create(logoButton, TweenInfo.new(0.2), {TextColor3 = colors.active}):Play()
+    TweenService:Create(logoText, TweenInfo.new(0.2), {TextColor3 = colors.active}):Play()
     TweenService:Create(logoButton, TweenInfo.new(0.2), {BackgroundColor3 = colors.accent}):Play()
 end)
 
 logoButton.MouseLeave:Connect(function()
-    TweenService:Create(logoButton, TweenInfo.new(0.2), {TextColor3 = colors.text}):Play()
+    TweenService:Create(logoText, TweenInfo.new(0.2), {TextColor3 = colors.text}):Play()
     TweenService:Create(logoButton, TweenInfo.new(0.2), {BackgroundColor3 = colors.primary}):Play()
 end)
 
@@ -2684,78 +2242,19 @@ teleportButton.MouseButton1Click:Connect(function()
     teleportToTargetPlayer()
 end)
 
--- Refresh Teleport List Button Click Handler
-refreshTeleportButton.MouseButton1Click:Connect(function()
-    print("[TELEPORT_DEBUG] Refresh button clicked!")
-    showNotification("TELEPORT: REFRESHING_LIST")
-    refreshPlayerList()
-    task.wait(0.1)
-    showNotification("TELEPORT: LIST_UPDATED")
-end)
-
--- Kick Button Click Handler
-kickButton.MouseButton1Click:Connect(function()
-    print("[KICK_DEBUG] Kick button clicked!")
-    print("[KICK_DEBUG] Button active state:", kickButton.Active)
-    print("[KICK_DEBUG] Selected player:", selectedKickPlayer and selectedKickPlayer.Name or "none")
-    kickSelectedPlayer()
-end)
-
--- Refresh Kick List Button Click Handler
-refreshKickButton.MouseButton1Click:Connect(function()
-    print("[KICK_DEBUG] Refresh button clicked!")
-    showNotification("KICK: REFRESHING_LIST")
-    refreshKickPlayerList()
-    task.wait(0.1)
-    showNotification("KICK: LIST_UPDATED")
-end)
-
--- Hover Effects for Kick Button
-kickButton.MouseEnter:Connect(function()
-    if kickButton.Active then
-        TweenService:Create(kickButton, TweenInfo.new(0.1), {BackgroundColor3 = colors.active}):Play()
-    end
-end)
-
-kickButton.MouseLeave:Connect(function()
-    if kickButton.Active then
-        TweenService:Create(kickButton, TweenInfo.new(0.1), {BackgroundColor3 = colors.active}):Play()
-    end
-end)
-
--- Hover Effects for Refresh Kick Button
-refreshKickButton.MouseEnter:Connect(function()
-    TweenService:Create(refreshKickButton, TweenInfo.new(0.1), {BackgroundColor3 = colors.active}):Play()
-end)
-
-refreshKickButton.MouseLeave:Connect(function()
-    TweenService:Create(refreshKickButton, TweenInfo.new(0.1), {BackgroundColor3 = colors.tertiary}):Play()
-end)
-
 -- Carry Button Click Handlers
 startCarryButton.MouseButton1Click:Connect(function()
-    print("[CARRY_DEBUG] Start carry button clicked!")
     startCarryingPlayers()
 end)
 
 stopCarryButton.MouseButton1Click:Connect(function()
-    print("[CARRY_DEBUG] Stop carry button clicked!")
     stopCarryingPlayers()
 end)
 
--- Refresh Carry Button Click Handler
-refreshCarryButton.MouseButton1Click:Connect(function()
-    print("[CARRY_DEBUG] Refresh button clicked!")
-    showNotification("CARRY: REFRESHING_LIST")
-    refreshCarryPlayerList()
-    task.wait(0.1)
-    showNotification("CARRY: LIST_UPDATED")
-end)
-
--- Hover Effects for Start Carry Button
+-- Hover Effects for Carry Buttons
 startCarryButton.MouseEnter:Connect(function()
     if startCarryButton.Active then
-        TweenService:Create(startCarryButton, TweenInfo.new(0.1), {BackgroundColor3 = colors.active}):Play()
+        TweenService:Create(startCarryButton, TweenInfo.new(0.1), {BackgroundColor3 = colors.accent}):Play()
     end
 end)
 
@@ -2765,26 +2264,16 @@ startCarryButton.MouseLeave:Connect(function()
     end
 end)
 
--- Hover Effects for Stop Carry Button
 stopCarryButton.MouseEnter:Connect(function()
     if stopCarryButton.Active then
-        TweenService:Create(stopCarryButton, TweenInfo.new(0.1), {BackgroundColor3 = colors.active}):Play()
+        TweenService:Create(stopCarryButton, TweenInfo.new(0.1), {BackgroundColor3 = colors.accent}):Play()
     end
 end)
 
 stopCarryButton.MouseLeave:Connect(function()
     if stopCarryButton.Active then
-        TweenService:Create(stopCarryButton, TweenInfo.new(0.1), {BackgroundColor3 = colors.tertiary}):Play()
+        TweenService:Create(stopCarryButton, TweenInfo.new(0.1), {BackgroundColor3 = colors.active}):Play()
     end
-end)
-
--- Hover Effects for Refresh Carry Button
-refreshCarryButton.MouseEnter:Connect(function()
-    TweenService:Create(refreshCarryButton, TweenInfo.new(0.1), {BackgroundColor3 = colors.active}):Play()
-end)
-
-refreshCarryButton.MouseLeave:Connect(function()
-    TweenService:Create(refreshCarryButton, TweenInfo.new(0.1), {BackgroundColor3 = colors.tertiary}):Play()
 end)
 
 -- Hover Effects for Teleport Button
@@ -2798,15 +2287,6 @@ teleportButton.MouseLeave:Connect(function()
     if teleportButton.Active then
         TweenService:Create(teleportButton, TweenInfo.new(0.1), {BackgroundColor3 = colors.active}):Play()
     end
-end)
-
--- Hover Effects for Refresh Teleport Button
-refreshTeleportButton.MouseEnter:Connect(function()
-    TweenService:Create(refreshTeleportButton, TweenInfo.new(0.1), {BackgroundColor3 = colors.active}):Play()
-end)
-
-refreshTeleportButton.MouseLeave:Connect(function()
-    TweenService:Create(refreshTeleportButton, TweenInfo.new(0.1), {BackgroundColor3 = colors.tertiary}):Play()
 end)
 
 -- Hover Effects
@@ -3092,8 +2572,6 @@ Players.PlayerAdded:Connect(function(newPlayer)
     end
     -- Refresh teleport player list
     refreshPlayerList()
-    -- Refresh kick player list
-    refreshKickPlayerList()
     -- Refresh carry player list
     refreshCarryPlayerList()
 end)
@@ -3103,11 +2581,15 @@ Players.PlayerRemoving:Connect(function(removingPlayer)
         removePlayerLine(removingPlayer)
     end
     -- Remove carry button for leaving player
-    removeCarryButton(removingPlayer)
+    for i, selectedPlayer in ipairs(selectedCarryPlayers) do
+        if selectedPlayer == removingPlayer then
+            table.remove(selectedCarryPlayers, i)
+            break
+        end
+    end
+
     -- Refresh teleport player list
     refreshPlayerList()
-    -- Refresh kick player list
-    refreshKickPlayerList()
     -- Refresh carry player list
     refreshCarryPlayerList()
 end)
@@ -3118,9 +2600,6 @@ updateCategoryPositions()
 -- Initialize teleport player list
 refreshPlayerList()
 
--- Initialize kick player list
-refreshKickPlayerList()
-
 -- Initialize carry player list
 refreshCarryPlayerList()
 
@@ -3130,13 +2609,4 @@ print("[PANEL] CLICK_LOGO:TOGGLE_PANEL DRAG_HEADER:MOVE_PANEL CTRL+P:RESET_POSIT
 print("[CATEGORIES] CLICK_CATEGORY_HEADERS:TOGGLE_EXPAND_COLLAPSE")
 print("[RESET] CTRL+R: SYSTEM_RESET")
 print("[SCROLLING] USE_MOUSE_WHEEL_OR_SCROLLBAR")
-print("[FLIGHT_CONTROLS] W:FORWARD S:BACKWARD A:LEFT D:RIGHT SPACE:UP SHIFT:DOWN")
-print("[CARRY] MULTI_SELECT:CLICK_NAMES START:START_BUTTON STOP:STOP_BUTTON")
-
--- Debug info for logo button and panel
-print("[INIT_DEBUG] Logo button created at:", logoButton.Position.X.Offset, logoButton.Position.Y.Offset)
-print("[INIT_DEBUG] Main panel position:", mainPanel.Position.X.Offset, mainPanel.Position.Y.Offset)
-print("[INIT_DEBUG] Logo button visible:", logoButton.Visible)
-print("[INIT_DEBUG] Main panel visible:", mainPanel.Visible)
-print("[INIT_DEBUG] Logo button draggable:", logoButton.Draggable)
-print("[INIT_DEBUG] Main panel draggable:", mainPanel.Draggable) 
+print("[FLIGHT_CONTROLS] W:FORWARD S:BACKWARD A:LEFT D:RIGHT SPACE:UP SHIFT:DOWN") 
