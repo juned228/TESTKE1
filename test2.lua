@@ -972,12 +972,30 @@ teleportSectionLabel.Name = "TeleportSectionLabel"
 teleportSectionLabel.Parent = teleportSection
 teleportSectionLabel.BackgroundTransparency = 1
 teleportSectionLabel.Position = UDim2.new(0, 10, 0, 5)
-teleportSectionLabel.Size = UDim2.new(0, 270, 0, 20)
+teleportSectionLabel.Size = UDim2.new(0, 240, 0, 20)
 teleportSectionLabel.Font = Enum.Font.Code
 teleportSectionLabel.Text = "{02} PLAYER_TELEPORT"
 teleportSectionLabel.TextColor3 = colors.text_dim
 teleportSectionLabel.TextSize = 11
 teleportSectionLabel.TextXAlignment = Enum.TextXAlignment.Left
+
+-- Teleport Refresh Button
+local teleportRefreshButton = Instance.new("TextButton")
+teleportRefreshButton.Name = "TeleportRefreshButton"
+teleportRefreshButton.Parent = teleportSection
+teleportRefreshButton.BackgroundColor3 = colors.tertiary
+teleportRefreshButton.BorderSizePixel = 1
+teleportRefreshButton.BorderColor3 = colors.secondary
+teleportRefreshButton.Position = UDim2.new(0, 255, 0, 5)
+teleportRefreshButton.Size = UDim2.new(0, 25, 0, 20)
+teleportRefreshButton.Font = Enum.Font.Code
+teleportRefreshButton.Text = "⟳"
+teleportRefreshButton.TextColor3 = colors.text_dim
+teleportRefreshButton.TextSize = 12
+teleportRefreshButton.ZIndex = 3
+local teleportRefreshCorner = Instance.new("UICorner")
+teleportRefreshCorner.CornerRadius = UDim.new(0, 2)
+teleportRefreshCorner.Parent = teleportRefreshButton
 
 -- Player List Container
 local playerListContainer = Instance.new("Frame")
@@ -1057,12 +1075,30 @@ carrySectionLabel.Name = "CarrySectionLabel"
 carrySectionLabel.Parent = carrySection
 carrySectionLabel.BackgroundTransparency = 1
 carrySectionLabel.Position = UDim2.new(0, 10, 0, 5)
-carrySectionLabel.Size = UDim2.new(0, 270, 0, 20)
+carrySectionLabel.Size = UDim2.new(0, 240, 0, 20)
 carrySectionLabel.Font = Enum.Font.Code
 carrySectionLabel.Text = "{03} CARRY"
 carrySectionLabel.TextColor3 = colors.text_dim
 carrySectionLabel.TextSize = 11
 carrySectionLabel.TextXAlignment = Enum.TextXAlignment.Left
+
+-- Carry Refresh Button
+local carryRefreshButton = Instance.new("TextButton")
+carryRefreshButton.Name = "CarryRefreshButton"
+carryRefreshButton.Parent = carrySection
+carryRefreshButton.BackgroundColor3 = colors.tertiary
+carryRefreshButton.BorderSizePixel = 1
+carryRefreshButton.BorderColor3 = colors.secondary
+carryRefreshButton.Position = UDim2.new(0, 255, 0, 5)
+carryRefreshButton.Size = UDim2.new(0, 25, 0, 20)
+carryRefreshButton.Font = Enum.Font.Code
+carryRefreshButton.Text = "⟳"
+carryRefreshButton.TextColor3 = colors.text_dim
+carryRefreshButton.TextSize = 12
+carryRefreshButton.ZIndex = 3
+local carryRefreshCorner = Instance.new("UICorner")
+carryRefreshCorner.CornerRadius = UDim.new(0, 2)
+carryRefreshCorner.Parent = carryRefreshButton
 
 -- Carry Player List Container
 local carryListContainer = Instance.new("Frame")
@@ -2067,28 +2103,52 @@ local function startCarryingPlayers()
         end
 
         local adminRootPart = character.HumanoidRootPart
+        local adminCFrame = adminRootPart.CFrame
         local adminPosition = adminRootPart.Position
 
         -- Update each carried player
         for i, targetPlayer in ipairs(selectedCarryPlayers) do
             if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
                 local targetRootPart = targetPlayer.Character.HumanoidRootPart
+                local targetHumanoid = targetPlayer.Character:FindFirstChild("Humanoid")
 
-                -- Calculate circular formation around admin
+                -- Calculate circular formation around admin with proper rotation
                 local angle = (i / #selectedCarryPlayers) * math.pi * 2
-                local radius = 4 + (#selectedCarryPlayers * 0.5) -- Dynamic radius based on player count
+                local radius = 5 + (#selectedCarryPlayers * 0.8) -- Increased dynamic radius
                 local offsetX = math.cos(angle) * radius
                 local offsetZ = math.sin(angle) * radius
 
-                -- Set position with offset
-                targetRootPart.CFrame = CFrame.new(adminPosition + Vector3.new(offsetX, carryOffset.Y, offsetZ))
+                -- Calculate target position relative to admin's rotation
+                local relativeOffset = adminCFrame:VectorToWorldSpace(Vector3.new(offsetX, carryOffset.Y, offsetZ))
+                local targetPosition = adminPosition + relativeOffset
 
-                -- Disable player movement (freeze them)
-                if targetPlayer.Character:FindFirstChild("Humanoid") then
-                    local targetHumanoid = targetPlayer.Character.Humanoid
+                -- Set both position and rotation to match admin's facing direction
+                targetRootPart.CFrame = CFrame.new(targetPosition, adminPosition + adminCFrame.LookVector * 10)
+
+                -- Completely disable player movement and control
+                if targetHumanoid then
                     targetHumanoid.WalkSpeed = 0
                     targetHumanoid.JumpPower = 0
                     targetHumanoid.PlatformStand = true
+
+                    -- Disable state changes to prevent escaping
+                    targetHumanoid:SetStateEnabled(Enum.HumanoidStateType.Falling, false)
+                    targetHumanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, false)
+                    targetHumanoid:SetStateEnabled(Enum.HumanoidStateType.Freefall, false)
+
+                    -- Force humanoid to stay in PlatformStand state
+                    if targetHumanoid:GetState() ~= Enum.HumanoidStateType.PlatformStand then
+                        targetHumanoid:ChangeState(Enum.HumanoidStateType.PlatformStand)
+                    end
+                end
+
+                -- Create weld for more stable carrying (if not exists)
+                if not targetRootPart:FindFirstChild("CarryWeld") then
+                    local weld = Instance.new("WeldConstraint")
+                    weld.Name = "CarryWeld"
+                    weld.Part0 = adminRootPart
+                    weld.Part1 = targetRootPart
+                    weld.Parent = targetRootPart
                 end
             end
         end
@@ -2097,6 +2157,66 @@ local function startCarryingPlayers()
     -- Start heartbeat connection for continuous carry
     local carryConnection = RunService.Heartbeat:Connect(updateCarryPositions)
     table.insert(carryConnections, carryConnection)
+
+    -- Also bind to RenderStepped for smoother updates
+    local renderConnection = RunService.RenderStepped:Connect(updateCarryPositions)
+    table.insert(carryConnections, renderConnection)
+
+    -- Handle character respawns during carry
+    for _, targetPlayer in ipairs(selectedCarryPlayers) do
+        if targetPlayer then
+            local respawnConnection = targetPlayer.CharacterAdded:Connect(function(newCharacter)
+                if isCarryModeActive then
+                    -- Wait for humanoid to load
+                    local humanoid = newCharacter:WaitForChild("Humanoid", 5)
+                    local rootPart = newCharacter:WaitForChild("HumanoidRootPart", 5)
+
+                    if humanoid and rootPart then
+                        -- Apply carry settings immediately
+                        humanoid.WalkSpeed = 0
+                        humanoid.JumpPower = 0
+                        humanoid.PlatformStand = true
+                        humanoid:SetStateEnabled(Enum.HumanoidStateType.Falling, false)
+                        humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, false)
+                        humanoid:SetStateEnabled(Enum.HumanoidStateType.Freefall, false)
+                        humanoid:ChangeState(Enum.HumanoidStateType.PlatformStand)
+
+                        -- Create weld to new character
+                        local weld = Instance.new("WeldConstraint")
+                        weld.Name = "CarryWeld"
+                        weld.Part0 = character.HumanoidRootPart
+                        weld.Part1 = rootPart
+                        weld.Parent = rootPart
+                    end
+                end
+            end)
+            table.insert(carryConnections, respawnConnection)
+        end
+    end
+
+    -- Add safety check every 0.1 seconds to ensure carry mode persists
+    local safetyConnection = RunService.Heartbeat:Connect(function()
+        if isCarryModeActive then
+            for _, targetPlayer in ipairs(selectedCarryPlayers) do
+                if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("Humanoid") then
+                    local targetHumanoid = targetPlayer.Character.Humanoid
+
+                    -- Force carry settings to persist
+                    if targetHumanoid.WalkSpeed ~= 0 then
+                        targetHumanoid.WalkSpeed = 0
+                    end
+                    if targetHumanoid.JumpPower ~= 0 then
+                        targetHumanoid.JumpPower = 0
+                    end
+                    if not targetHumanoid.PlatformStand then
+                        targetHumanoid.PlatformStand = true
+                        targetHumanoid:ChangeState(Enum.HumanoidStateType.PlatformStand)
+                    end
+                end
+            end
+        end
+    end)
+    table.insert(carryConnections, safetyConnection)
 end
 
 local function stopCarryingPlayers()
@@ -2110,13 +2230,32 @@ local function stopCarryingPlayers()
     carryStatusDisplay.Text = "STATUS: IDLE"
     carryStatusDisplay.TextColor3 = colors.text_dim
 
-    -- Restore player movement
+    -- Restore player movement and clean up welds
     for _, targetPlayer in ipairs(selectedCarryPlayers) do
-        if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("Humanoid") then
-            local targetHumanoid = targetPlayer.Character.Humanoid
-            targetHumanoid.WalkSpeed = 16  -- Default walk speed
-            targetHumanoid.JumpPower = 50  -- Default jump power
-            targetHumanoid.PlatformStand = false
+        if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            local targetRootPart = targetPlayer.Character.HumanoidRootPart
+            local targetHumanoid = targetPlayer.Character:FindFirstChild("Humanoid")
+
+            -- Remove carry weld if exists
+            local carryWeld = targetRootPart:FindFirstChild("CarryWeld")
+            if carryWeld then
+                carryWeld:Destroy()
+            end
+
+            -- Restore humanoid movement and states
+            if targetHumanoid then
+                targetHumanoid.WalkSpeed = 16  -- Default walk speed
+                targetHumanoid.JumpPower = 50  -- Default jump power
+                targetHumanoid.PlatformStand = false
+
+                -- Re-enable humanoid states
+                targetHumanoid:SetStateEnabled(Enum.HumanoidStateType.Falling, true)
+                targetHumanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, true)
+                targetHumanoid:SetStateEnabled(Enum.HumanoidStateType.Freefall, true)
+
+                -- Force humanoid back to normal state
+                targetHumanoid:ChangeState(Enum.HumanoidStateType.Running)
+            end
         end
     end
 
@@ -2242,6 +2381,21 @@ teleportButton.MouseButton1Click:Connect(function()
     teleportToTargetPlayer()
 end)
 
+-- Teleport Refresh Button Click Handler
+teleportRefreshButton.MouseButton1Click:Connect(function()
+    refreshPlayerList()
+    showNotification("TELEPORT: PLAYER_LIST_REFRESHED")
+end)
+
+-- Teleport Refresh Button Hover Effects
+teleportRefreshButton.MouseEnter:Connect(function()
+    TweenService:Create(teleportRefreshButton, TweenInfo.new(0.1), {BackgroundColor3 = colors.accent, TextColor3 = colors.text}):Play()
+end)
+
+teleportRefreshButton.MouseLeave:Connect(function()
+    TweenService:Create(teleportRefreshButton, TweenInfo.new(0.1), {BackgroundColor3 = colors.tertiary, TextColor3 = colors.text_dim}):Play()
+end)
+
 -- Carry Button Click Handlers
 startCarryButton.MouseButton1Click:Connect(function()
     startCarryingPlayers()
@@ -2249,6 +2403,21 @@ end)
 
 stopCarryButton.MouseButton1Click:Connect(function()
     stopCarryingPlayers()
+end)
+
+-- Carry Refresh Button Click Handler
+carryRefreshButton.MouseButton1Click:Connect(function()
+    refreshCarryPlayerList()
+    showNotification("CARRY: PLAYER_LIST_REFRESHED")
+end)
+
+-- Carry Refresh Button Hover Effects
+carryRefreshButton.MouseEnter:Connect(function()
+    TweenService:Create(carryRefreshButton, TweenInfo.new(0.1), {BackgroundColor3 = colors.accent, TextColor3 = colors.text}):Play()
+end)
+
+carryRefreshButton.MouseLeave:Connect(function()
+    TweenService:Create(carryRefreshButton, TweenInfo.new(0.1), {BackgroundColor3 = colors.tertiary, TextColor3 = colors.text_dim}):Play()
 end)
 
 -- Hover Effects for Carry Buttons
