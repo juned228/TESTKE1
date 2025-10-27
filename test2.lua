@@ -2105,120 +2105,7 @@ local function removeCarryEffect(targetPlayer)
     end
 end
 
--- Create carry style selection menu
-local function createCarryStyleMenu(targetPlayer)
-    -- Remove existing menu
-    local existingMenu = player.PlayerGui:FindFirstChild("CarryStyleMenu")
-    if existingMenu then
-        existingMenu:Destroy()
-    end
-
-    -- Create menu GUI
-    local menuGui = Instance.new("ScreenGui")
-    menuGui.Name = "CarryStyleMenu"
-    menuGui.Parent = player.PlayerGui
-    menuGui.IgnoreGuiInset = true
-    menuGui.ResetOnSpawn = false
-
-    -- Main frame
-    local mainFrame = Instance.new("Frame")
-    mainFrame.Name = "MenuFrame"
-    mainFrame.Parent = menuGui
-    mainFrame.Size = UDim2.new(0, 250, 0, 200)
-    mainFrame.Position = UDim2.new(0.5, -125, 0.5, -100)
-    mainFrame.BackgroundColor3 = colors.secondary
-    mainFrame.BorderSizePixel = 0
-    mainFrame.Active = true
-    mainFrame.Draggable = true
-
-    -- Corner
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 8)
-    corner.Parent = mainFrame
-
-    -- Title
-    local titleLabel = Instance.new("TextLabel")
-    titleLabel.Name = "Title"
-    titleLabel.Parent = mainFrame
-    titleLabel.Size = UDim2.new(1, 0, 0, 30)
-    titleLabel.Position = UDim2.new(0, 0, 0, 0)
-    titleLabel.BackgroundTransparency = 1
-    titleLabel.Text = "Pilih Gaya Carry untuk " .. targetPlayer.Name
-    titleLabel.TextColor3 = colors.text
-    titleLabel.TextScaled = true
-    titleLabel.Font = Enum.Font.SourceSansBold
-
-    -- Style buttons
-    local buttonY = 40
-    for styleName, styleData in pairs(carryStyles) do
-        local styleButton = Instance.new("TextButton")
-        styleButton.Name = styleName .. "Button"
-        styleButton.Parent = mainFrame
-        styleButton.Size = UDim2.new(1, -20, 0, 35)
-        styleButton.Position = UDim2.new(0, 10, 0, buttonY)
-        styleButton.BackgroundColor3 = colors.tertiary
-        styleButton.Text = styleData.DisplayName
-        styleButton.TextColor3 = colors.text
-        styleButton.Font = Enum.Font.SourceSans
-        styleButton.BorderSizePixel = 0
-
-        local buttonCorner = Instance.new("UICorner")
-        buttonCorner.CornerRadius = UDim.new(0, 5)
-        buttonCorner.Parent = styleButton
-
-        -- Button click handler
-        styleButton.MouseButton1Click:Connect(function()
-            currentCarryStyle = styleName
-            menuGui:Destroy()
-            showNotification("Carry style: " .. styleData.DisplayName, "Success")
-
-            -- Auto-start carry after style selection
-            if #selectedCarryPlayers > 0 then
-                startCarryingPlayers()
-            end
-        end)
-
-        -- Hover effects
-        styleButton.MouseEnter:Connect(function()
-            styleButton.BackgroundColor3 = colors.accent
-        end)
-
-        styleButton.MouseLeave:Connect(function()
-            styleButton.BackgroundColor3 = colors.tertiary
-        end)
-
-        buttonY = buttonY + 40
-    end
-
-    -- Close button
-    local closeButton = Instance.new("TextButton")
-    closeButton.Name = "CloseButton"
-    closeButton.Parent = mainFrame
-    closeButton.Size = UDim2.new(0, 20, 0, 20)
-    closeButton.Position = UDim2.new(1, -25, 0, 5)
-    closeButton.BackgroundColor3 = colors.danger or Color3.fromRGB(255, 0, 0)
-    closeButton.Text = "X"
-    closeButton.TextColor3 = Color3.new(1, 1, 1)
-    closeButton.Font = Enum.Font.SourceSansBold
-
-    local closeCorner = Instance.new("UICorner")
-    closeCorner.CornerRadius = UDim.new(0, 3)
-    closeCorner.Parent = closeButton
-
-    closeButton.MouseButton1Click:Connect(function()
-        menuGui:Destroy()
-        -- Clear selection
-        for i = #selectedCarryPlayers, 1, -1 do
-            if selectedCarryPlayers[i] == targetPlayer then
-                table.remove(selectedCarryPlayers, i)
-                break
-            end
-        end
-        refreshCarryPlayerList()
-    end)
-end
-
--- Fly Functions
+  -- Fly Functions
 local function enableFly()
     if isFlying then return end
 
@@ -2352,31 +2239,49 @@ local function createCarryPlayerButton(targetPlayer, index)
     indicatorCorner.CornerRadius = UDim.new(0, 8)
     indicatorCorner.Parent = selectIndicator
 
-    -- Click handler for carry with style selection
+    -- Click handler for instant carry (no permission needed)
     button.MouseButton1Click:Connect(function()
-        -- Show carry style menu when selecting a player
-        createCarryStyleMenu(targetPlayer)
-
-        -- Add to selection (will be confirmed after style selection)
+        -- Check if player is already selected
         local isSelected = false
+        local selectedIndex = -1
+
         for i, player in ipairs(selectedCarryPlayers) do
             if player == targetPlayer then
                 isSelected = true
+                selectedIndex = i
                 break
             end
         end
 
-        if not isSelected then
+        if isSelected then
+            -- Remove from selection
+            table.remove(selectedCarryPlayers, selectedIndex)
+            selectIndicator.Visible = false
+            button.BackgroundColor3 = colors.inactive
+            button.TextColor3 = colors.text_dim
+            showNotification("Removed " .. targetPlayer.Name .. " from carry selection", "Info")
+        else
+            -- Add to selection and start carrying immediately
             table.insert(selectedCarryPlayers, targetPlayer)
             selectIndicator.Visible = true
             button.BackgroundColor3 = colors.active
             button.TextColor3 = colors.text
+
+            -- Set default carry style
+            currentCarryStyle = "Normal"
 
             -- Update display
             local selectedCount = #selectedCarryPlayers
             selectedCarryDisplay.Text = "SELECTED: " .. selectedCount .. " PLAYER(S)"
             startCarryButton.Active = true
             startCarryButton.BackgroundColor3 = colors.active
+
+            showNotification("Added " .. targetPlayer.Name .. " to carry selection", "Success")
+        end
+
+        -- Auto-start carry if players are selected and not already carrying
+        if #selectedCarryPlayers > 0 and not isCarryModeActive then
+            startCarryingPlayers()
         end
     end)
 
@@ -2470,13 +2375,8 @@ end
 local function startCarryingPlayers()
     if #selectedCarryPlayers == 0 or isCarryModeActive then return end
 
-    -- Check if carry style is selected
-    if not currentCarryStyle or not carryStyles[currentCarryStyle] then
-        showNotification("Silakan pilih gaya carry terlebih dahulu!", "Warning")
-        return
-    end
-
-    local carryStyle = carryStyles[currentCarryStyle]
+    -- Use default carry style if not set
+    local carryStyle = carryStyles[currentCarryStyle] or carryStyles.Normal
 
     isCarryModeActive = true
     startCarryButton.Active = false
