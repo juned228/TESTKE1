@@ -954,11 +954,21 @@ local function updateLinePlayerToggleSwitch(enabled)
 end
 
 local function createPlayerLine(targetPlayer)
+    -- Don't create line for local player (admin) itself
+    if targetPlayer == player then return end
+
     if not targetPlayer or not targetPlayer.Character then return end
 
-    local character = targetPlayer.Character
-    local head = character:FindFirstChild("Head")
-    if not head then return end
+    local targetCharacter = targetPlayer.Character
+    local targetHead = targetCharacter:FindFirstChild("Head")
+    if not targetHead then return end
+
+    -- Check local player character
+    local localCharacter = player.Character
+    if not localCharacter then return end
+
+    local localHead = localCharacter:FindFirstChild("Head")
+    if not localHead then return end
 
     -- Remove existing line for this player
     if playerLines[targetPlayer] then
@@ -973,26 +983,30 @@ local function createPlayerLine(targetPlayer)
     -- Create attachments
     local attachment0 = Instance.new("Attachment")
     attachment0.Name = "LineStart"
-    attachment0.Parent = head
+    attachment0.Parent = targetHead
 
     local attachment1 = Instance.new("Attachment")
     attachment1.Name = "LineEnd"
-    attachment1.Parent = Workspace.CurrentCamera
+    attachment1.Parent = localHead
 
-    -- Configure line
+    -- Configure line - connect target player to local player (admin)
     line.Attachment0 = attachment0
     line.Attachment1 = attachment1
     line.Color = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, targetPlayer == player and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)),
-        ColorSequenceKeypoint.new(1, targetPlayer == player and Color3.fromRGB(0, 150, 0) or Color3.fromRGB(150, 0, 0))
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 100, 100)), -- Red at target player
+        ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 200, 100)), -- Orange in middle
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(100, 255, 100))  -- Green at local player
     })
     line.Transparency = NumberSequence.new({
-        NumberSequenceKeypoint.new(0, 0.3),
-        NumberSequenceKeypoint.new(1, 0.8)
+        NumberSequenceKeypoint.new(0, 0.2), -- More visible at target
+        NumberSequenceKeypoint.new(0.5, 0.15), -- Most visible in middle
+        NumberSequenceKeypoint.new(1, 0.2)  -- More visible at local player
     })
-    line.Width0 = 0.1
-    line.Width1 = 0.1
+    line.Width0 = 0.3
+    line.Width1 = 0.3
     line.FaceCamera = true
+    line.LightInfluence = 0.5
+    line.LightEmission = 0.2
 
     playerLines[targetPlayer] = line
 end
@@ -1013,16 +1027,19 @@ local function refreshAllPlayerLines()
     end
     playerLines = {}
 
-    -- Create lines for all players
+    -- Create lines for all players except local player
+    local lineCount = 0
     for _, targetPlayer in ipairs(Players:GetPlayers()) do
-        if targetPlayer.Character and targetPlayer.Character:FindFirstChild("Head") then
+        if targetPlayer ~= player and targetPlayer.Character and targetPlayer.Character:FindFirstChild("Head") then
             createPlayerLine(targetPlayer)
+            lineCount = lineCount + 1
         end
     end
 
     -- Update status
-    local playerCount = #Players:GetPlayers()
-    linePlayerStatusDisplay.Text = string.format("PLAYERS: %d | STATUS: ACTIVE", playerCount)
+    local totalPlayers = #Players:GetPlayers()
+    local connectedPlayers = totalPlayers - 1 -- Exclude local player
+    linePlayerStatusDisplay.Text = string.format("CONNECTIONS: %d/%d | STATUS: ACTIVE", lineCount, connectedPlayers)
 end
 
 local function enableLinePlayer()
@@ -1048,16 +1065,21 @@ local function enableLinePlayer()
             end
         end
 
-        -- Add lines for new players
+        -- Add lines for new players (except local player)
         for _, targetPlayer in ipairs(Players:GetPlayers()) do
-            if not playerLines[targetPlayer] then
+            if targetPlayer ~= player and not playerLines[targetPlayer] then
                 createPlayerLine(targetPlayer)
             end
         end
 
-        -- Update player count
-        local playerCount = #Players:GetPlayers()
-        linePlayerStatusDisplay.Text = string.format("PLAYERS: %d | STATUS: ACTIVE", playerCount)
+        -- Update connection count
+        local totalPlayers = #Players:GetPlayers()
+        local connectedPlayers = totalPlayers - 1 -- Exclude local player
+        local activeConnections = 0
+        for _, _ in pairs(playerLines) do
+            activeConnections = activeConnections + 1
+        end
+        linePlayerStatusDisplay.Text = string.format("CONNECTIONS: %d/%d | STATUS: ACTIVE", activeConnections, connectedPlayers)
     end)
 
     showNotification("LINE_PLAYER_ON_HEAD: ENABLED")
@@ -1084,7 +1106,7 @@ local function disableLinePlayer()
     playerLines = {}
 
     -- Update status
-    linePlayerStatusDisplay.Text = "PLAYERS: 0 | STATUS: INACTIVE"
+    linePlayerStatusDisplay.Text = "CONNECTIONS: 0/0 | STATUS: INACTIVE"
 
     showNotification("LINE_PLAYER_ON_HEAD: DISABLED")
 end
@@ -1803,10 +1825,13 @@ player.CharacterAdded:Connect(function(newCharacter)
     disableInfinityJump()
     disableHighJump()
 
-    -- Refresh lines if enabled
+    -- Refresh lines if enabled (wait for head to load)
     if isLinePlayerEnabled then
         task.wait(1) -- Wait for character to load
-        refreshAllPlayerLines()
+        local head = newCharacter:WaitForChild("Head", 5)
+        if head then
+            refreshAllPlayerLines()
+        end
     end
 end)
 
@@ -1821,7 +1846,7 @@ end)
 
 -- Player join/leave events for auto-refresh
 Players.PlayerAdded:Connect(function(newPlayer)
-    if isLinePlayerEnabled then
+    if isLinePlayerEnabled and newPlayer ~= player then
         -- Wait for character to load
         newPlayer.CharacterAdded:Connect(function()
             task.wait(0.5)
