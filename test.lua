@@ -51,6 +51,10 @@ local lineUpdateConnection = nil
 local selectedTeleportPlayer = nil
 local teleportPlayerButtons = {}
 
+-- Kick Player variables
+local selectedKickPlayer = nil
+local kickPlayerButtons = {}
+
 -- Category collapse state variables
 local isMainCategoryCollapsed = false
 local isLocalPlayerCategoryCollapsed = false
@@ -1030,6 +1034,91 @@ selectedPlayerDisplay.Text = "SELECTED: NONE"
 selectedPlayerDisplay.TextColor3 = colors.text_dim
 selectedPlayerDisplay.TextSize = 9
 
+-- Kick Player Section (Sub-category of LOCALPLAYER)
+local kickSection = Instance.new("Frame")
+kickSection.Name = "KickSection"
+kickSection.Parent = scrollFrame
+kickSection.BackgroundColor3 = colors.secondary
+kickSection.BorderSizePixel = 1
+kickSection.BorderColor3 = colors.tertiary
+kickSection.Position = UDim2.new(0, 15, 0, 875)  -- Will be positioned by updateCategoryPositions
+kickSection.Size = UDim2.new(0, 290, 0, 180)
+
+local kickCorner = Instance.new("UICorner")
+kickCorner.CornerRadius = UDim.new(0, 3)
+kickCorner.Parent = kickSection
+
+-- Kick Section Header
+local kickSectionLabel = Instance.new("TextLabel")
+kickSectionLabel.Name = "KickSectionLabel"
+kickSectionLabel.Parent = kickSection
+kickSectionLabel.BackgroundTransparency = 1
+kickSectionLabel.Position = UDim2.new(0, 10, 0, 5)
+kickSectionLabel.Size = UDim2.new(0, 270, 0, 20)
+kickSectionLabel.Font = Enum.Font.Code
+kickSectionLabel.Text = "{03} KICK_PLAYER"
+kickSectionLabel.TextColor3 = colors.text_dim
+kickSectionLabel.TextSize = 11
+kickSectionLabel.TextXAlignment = Enum.TextXAlignment.Left
+
+-- Kick Player List Container
+local kickListContainer = Instance.new("Frame")
+kickListContainer.Name = "KickListContainer"
+kickListContainer.Parent = kickSection
+kickListContainer.BackgroundColor3 = colors.tertiary
+kickListContainer.BorderSizePixel = 0
+kickListContainer.Position = UDim2.new(0, 10, 0, 30)
+kickListContainer.Size = UDim2.new(0, 270, 0, 100)
+
+local kickListCorner = Instance.new("UICorner")
+kickListCorner.CornerRadius = UDim.new(0, 2)
+kickListCorner.Parent = kickListContainer
+
+-- Kick Player List ScrollFrame
+local kickListScroll = Instance.new("ScrollingFrame")
+kickListScroll.Name = "KickListScroll"
+kickListScroll.Parent = kickListContainer
+kickListScroll.BackgroundColor3 = colors.tertiary
+kickListScroll.BackgroundTransparency = 0
+kickListScroll.BorderSizePixel = 0
+kickListScroll.Position = UDim2.new(0, 0, 0, 0)
+kickListScroll.Size = UDim2.new(1, 0, 1, 0)
+kickListScroll.ScrollBarThickness = 4
+kickListScroll.ScrollBarImageColor3 = colors.accent
+kickListScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+kickListScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+
+-- Kick Button
+local kickButton = Instance.new("TextButton")
+kickButton.Name = "KickButton"
+kickButton.Parent = kickSection
+kickButton.BackgroundColor3 = colors.active
+kickButton.BorderSizePixel = 1
+kickButton.BorderColor3 = colors.accent
+kickButton.Position = UDim2.new(0, 10, 0, 140)
+kickButton.Size = UDim2.new(0, 270, 0, 25)
+kickButton.Font = Enum.Font.Code
+kickButton.Text = "KICK PLAYER INI"
+kickButton.TextColor3 = colors.text
+kickButton.TextSize = 11
+kickButton.Active = false  -- Disabled until player is selected
+
+local kickButtonCorner = Instance.new("UICorner")
+kickButtonCorner.CornerRadius = UDim.new(0, 2)
+kickButtonCorner.Parent = kickButton
+
+-- Selected Kick Player Display
+local selectedKickDisplay = Instance.new("TextLabel")
+selectedKickDisplay.Name = "SelectedKickDisplay"
+selectedKickDisplay.Parent = kickSection
+selectedKickDisplay.BackgroundTransparency = 1
+selectedKickDisplay.Position = UDim2.new(0, 10, 0, 170)
+selectedKickDisplay.Size = UDim2.new(0, 270, 0, 15)
+selectedKickDisplay.Font = Enum.Font.Code
+selectedKickDisplay.Text = "SELECTED: NONE"
+selectedKickDisplay.TextColor3 = colors.text_dim
+selectedKickDisplay.TextSize = 9
+
 -- Line Player Functions
 local function updateLinePlayerToggleSwitch(enabled)
     if enabled then
@@ -1362,6 +1451,203 @@ local function teleportToTargetPlayer()
     showNotification("TELEPORT: SUCCESS_TO_" .. selectedTeleportPlayer.Name:upper())
 end
 
+-- Kick Player Functions
+local function createKickButton(targetPlayer, index)
+    -- Don't create button for local player (admin)
+    if targetPlayer == player then return end
+
+    -- Remove existing button for this player
+    if kickPlayerButtons[targetPlayer] then
+        kickPlayerButtons[targetPlayer]:Destroy()
+        kickPlayerButtons[targetPlayer] = nil
+    end
+
+    -- Calculate Y position based on index
+    local buttonY = (index - 1) * 22
+    print("[KICK_DEBUG] Creating kick button for " .. targetPlayer.Name .. " at index " .. index .. ", Y position: " .. buttonY)
+
+    -- Create new button
+    local kickPlayerButton = Instance.new("TextButton")
+    kickPlayerButton.Name = "KickButton_" .. targetPlayer.Name
+    kickPlayerButton.Parent = kickListScroll
+    kickPlayerButton.BackgroundColor3 = colors.inactive
+    kickPlayerButton.BorderSizePixel = 0
+    kickPlayerButton.Position = UDim2.new(0, 2, 0, buttonY)  -- Position each button below previous one
+    kickPlayerButton.Size = UDim2.new(1, -4, 0, 20)
+    kickPlayerButton.Font = Enum.Font.Code
+    kickPlayerButton.Text = targetPlayer.Name
+    kickPlayerButton.TextColor3 = colors.text
+    kickPlayerButton.TextSize = 10
+    kickPlayerButton.TextXAlignment = Enum.TextXAlignment.Left
+    kickPlayerButton.TextYAlignment = Enum.TextYAlignment.Center
+
+    local kickButtonCorner = Instance.new("UICorner")
+    kickButtonCorner.CornerRadius = UDim.new(0, 2)
+    kickButtonCorner.Parent = kickPlayerButton
+
+    -- Store reference
+    kickPlayerButtons[targetPlayer] = kickPlayerButton
+
+    -- Click handler
+    kickPlayerButton.MouseButton1Click:Connect(function()
+        -- Deselect previous player
+        if selectedKickPlayer and selectedKickPlayer ~= targetPlayer then
+            if kickPlayerButtons[selectedKickPlayer] then
+                kickPlayerButtons[selectedKickPlayer].BackgroundColor3 = colors.inactive
+            end
+        end
+
+        -- Select new player
+        selectedKickPlayer = targetPlayer
+        kickPlayerButton.BackgroundColor3 = colors.active
+        kickButton.Active = true
+        kickButton.BackgroundColor3 = colors.active
+        selectedKickDisplay.Text = "SELECTED: " .. targetPlayer.Name
+        selectedKickDisplay.TextColor3 = colors.text
+    end)
+
+    -- Hover effects
+    kickPlayerButton.MouseEnter:Connect(function()
+        if selectedKickPlayer ~= targetPlayer then
+            TweenService:Create(kickPlayerButton, TweenInfo.new(0.1), {BackgroundColor3 = colors.tertiary}):Play()
+        end
+    end)
+
+    kickPlayerButton.MouseLeave:Connect(function()
+        if selectedKickPlayer ~= targetPlayer then
+            TweenService:Create(kickPlayerButton, TweenInfo.new(0.1), {BackgroundColor3 = colors.inactive}):Play()
+        end
+    end)
+end
+
+local function removeKickButton(targetPlayer)
+    if kickPlayerButtons[targetPlayer] then
+        kickPlayerButtons[targetPlayer]:Destroy()
+        kickPlayerButtons[targetPlayer] = nil
+
+        -- Clear selection if this player was selected
+        if selectedKickPlayer == targetPlayer then
+            selectedKickPlayer = nil
+            kickButton.Active = false
+            kickButton.BackgroundColor3 = colors.inactive
+            selectedKickDisplay.Text = "SELECTED: NONE"
+            selectedKickDisplay.TextColor3 = colors.text_dim
+        end
+    end
+end
+
+local function refreshKickPlayerList()
+    -- Clear existing buttons
+    for _, button in pairs(kickPlayerButtons) do
+        if button then
+            button:Destroy()
+        end
+    end
+    kickPlayerButtons = {}
+
+    -- Clear selection
+    selectedKickPlayer = nil
+    kickButton.Active = false
+    kickButton.BackgroundColor3 = colors.inactive
+    selectedKickDisplay.Text = "SELECTED: NONE"
+    selectedKickDisplay.TextColor3 = colors.text_dim
+
+    -- Get all players except local player
+    local otherPlayers = {}
+    local allPlayers = Players:GetPlayers()
+    print("[KICK_DEBUG] Total players found: " .. #allPlayers)
+
+    for _, targetPlayer in ipairs(allPlayers) do
+        if targetPlayer ~= player then
+            table.insert(otherPlayers, targetPlayer)
+            print("[KICK_DEBUG] Added player to kick list: " .. targetPlayer.Name)
+        else
+            print("[KICK_DEBUG] Skipping local player: " .. targetPlayer.Name)
+        end
+    end
+
+    print("[KICK_DEBUG] Other players count for kick: " .. #otherPlayers)
+
+    -- Create buttons for all other players
+    for i, targetPlayer in ipairs(otherPlayers) do
+        createKickButton(targetPlayer, i)
+    end
+
+    -- Update canvas size based on number of players
+    local canvasHeight = #otherPlayers * 22
+    kickListScroll.CanvasSize = UDim2.new(0, 0, 0, canvasHeight)
+end
+
+local function kickSelectedPlayer()
+    -- Validate admin permissions (player should exist and not be in a "dead" state)
+    if not player or not player.Parent then
+        showNotification("KICK: ADMIN_VALIDATION_FAILED")
+        return
+    end
+
+    if not selectedKickPlayer then
+        showNotification("KICK: INVALID_TARGET")
+        return
+    end
+
+    -- Check if target player exists and is valid
+    if not selectedKickPlayer.Parent or not selectedKickPlayer:IsA("Player") then
+        showNotification("KICK: PLAYER_NOT_FOUND")
+        selectedKickPlayer = nil
+        kickButton.Active = false
+        kickButton.BackgroundColor3 = colors.inactive
+        selectedKickDisplay.Text = "SELECTED: NONE"
+        selectedKickDisplay.TextColor3 = colors.text_dim
+        refreshKickPlayerList()
+        return
+    end
+
+    -- Prevent kicking local player (self-kick protection)
+    if selectedKickPlayer == player then
+        showNotification("KICK: SELF_KICK_PROTECTED")
+        return
+    end
+
+    -- Get target info for notifications
+    local targetName = selectedKickPlayer.Name
+    local targetUserId = selectedKickPlayer.UserId
+
+    -- Confirm kick with notification
+    showNotification("KICK: INITIATED_FOR_" .. targetName:upper() .. " (ID:" .. targetUserId .. ")")
+
+    -- Perform kick (use pcall for safety with detailed error handling)
+    local success, errorMsg = pcall(function()
+        selectedKickPlayer:Kick("ADMIN_ACTION_BY_" .. player.Name)
+    end)
+
+    if success then
+        -- Clear selection state immediately
+        selectedKickPlayer = nil
+        kickButton.Active = false
+        kickButton.BackgroundColor3 = colors.inactive
+        selectedKickDisplay.Text = "SELECTED: NONE"
+        selectedKickDisplay.TextColor3 = colors.text_dim
+
+        -- Success notification
+        showNotification("KICK: SUCCESS_" .. targetName:upper() .. "_REMOVED")
+
+        -- Wait a moment then refresh list to show updated player count
+        task.wait(0.5)
+        refreshKickPlayerList()
+    else
+        -- Detailed error reporting
+        local errorInfo = tostring(errorMsg) or "UNKNOWN_ERROR"
+        if errorInfo:len() > 15 then
+            errorInfo = errorInfo:sub(1, 15)
+        end
+        showNotification("KICK: FAILED_" .. targetName:upper() .. "_ERR:" .. errorInfo)
+
+        -- Refresh list anyway in case player left during operation
+        task.wait(0.3)
+        refreshKickPlayerList()
+    end
+end
+
 -- Category Collapse/Expand Functions
 local function updateCategoryPositions()
     local speedSectionY = isMainCategoryCollapsed and 50 or 160
@@ -1371,6 +1657,7 @@ local function updateCategoryPositions()
     local localPlayerY = quickControlsY + (isMainCategoryCollapsed and 0 or 75)
     local linePlayerY = localPlayerY + (isLocalPlayerCategoryCollapsed and 0 or 50)
     local teleportY = linePlayerY + (isLocalPlayerCategoryCollapsed and 0 or 85)
+    local kickY = teleportY + (isLocalPlayerCategoryCollapsed and 0 or 190)
 
     -- Update positions with animation
     local function updatePosition(element, y)
@@ -1390,6 +1677,7 @@ local function updateCategoryPositions()
     updatePosition(localPlayerCategorySection, localPlayerY)
     updatePosition(linePlayerSection, linePlayerY)
     updatePosition(teleportSection, teleportY)
+    updatePosition(kickSection, kickY)
 
     -- Update visibility
     speedSection.Visible = not isMainCategoryCollapsed
@@ -1398,6 +1686,7 @@ local function updateCategoryPositions()
     quickControls.Visible = not isMainCategoryCollapsed
     linePlayerSection.Visible = not isLocalPlayerCategoryCollapsed
     teleportSection.Visible = not isLocalPlayerCategoryCollapsed
+    kickSection.Visible = not isLocalPlayerCategoryCollapsed
 end
 
 local function toggleMainCategory()
@@ -1452,20 +1741,46 @@ local function toggleLocalPlayerCategory()
         TweenService:Create(localPlayerCategoryIndicator, TweenInfo.new(0.3), {Rotation = 90}):Play()
     end
 
-    -- Animate line player section
+    -- Animate sections
     if isLocalPlayerCategoryCollapsed then
-        local fadeOut = TweenService:Create(linePlayerSection, TweenInfo.new(0.3), {BackgroundTransparency = 1})
-        fadeOut:Play()
-        fadeOut.Completed:Connect(function()
+        local fadeOut1 = TweenService:Create(linePlayerSection, TweenInfo.new(0.3), {BackgroundTransparency = 1})
+        fadeOut1:Play()
+        fadeOut1.Completed:Connect(function()
             if isLocalPlayerCategoryCollapsed then
                 linePlayerSection.Visible = false
+            end
+        end)
+
+        local fadeOut2 = TweenService:Create(teleportSection, TweenInfo.new(0.3), {BackgroundTransparency = 1})
+        fadeOut2:Play()
+        fadeOut2.Completed:Connect(function()
+            if isLocalPlayerCategoryCollapsed then
+                teleportSection.Visible = false
+            end
+        end)
+
+        local fadeOut3 = TweenService:Create(kickSection, TweenInfo.new(0.3), {BackgroundTransparency = 1})
+        fadeOut3:Play()
+        fadeOut3.Completed:Connect(function()
+            if isLocalPlayerCategoryCollapsed then
+                kickSection.Visible = false
             end
         end)
     else
         linePlayerSection.Visible = true
         linePlayerSection.BackgroundTransparency = 1
-        local fadeIn = TweenService:Create(linePlayerSection, TweenInfo.new(0.3), {BackgroundTransparency = 0})
-        fadeIn:Play()
+        local fadeIn1 = TweenService:Create(linePlayerSection, TweenInfo.new(0.3), {BackgroundTransparency = 0})
+        fadeIn1:Play()
+
+        teleportSection.Visible = true
+        teleportSection.BackgroundTransparency = 1
+        local fadeIn2 = TweenService:Create(teleportSection, TweenInfo.new(0.3), {BackgroundTransparency = 0})
+        fadeIn2:Play()
+
+        kickSection.Visible = true
+        kickSection.BackgroundTransparency = 1
+        local fadeIn3 = TweenService:Create(kickSection, TweenInfo.new(0.3), {BackgroundTransparency = 0})
+        fadeIn3:Play()
     end
 
     updateCategoryPositions()
@@ -1845,6 +2160,24 @@ teleportButton.MouseButton1Click:Connect(function()
     teleportToTargetPlayer()
 end)
 
+-- Kick Button Click Handler
+kickButton.MouseButton1Click:Connect(function()
+    kickSelectedPlayer()
+end)
+
+-- Hover Effects for Kick Button
+kickButton.MouseEnter:Connect(function()
+    if kickButton.Active then
+        TweenService:Create(kickButton, TweenInfo.new(0.1), {BackgroundColor3 = colors.active}):Play()
+    end
+end)
+
+kickButton.MouseLeave:Connect(function()
+    if kickButton.Active then
+        TweenService:Create(kickButton, TweenInfo.new(0.1), {BackgroundColor3 = colors.active}):Play()
+    end
+end)
+
 -- Hover Effects for Teleport Button
 teleportButton.MouseEnter:Connect(function()
     if teleportButton.Active then
@@ -2141,6 +2474,8 @@ Players.PlayerAdded:Connect(function(newPlayer)
     end
     -- Refresh teleport player list
     refreshPlayerList()
+    -- Refresh kick player list
+    refreshKickPlayerList()
 end)
 
 Players.PlayerRemoving:Connect(function(removingPlayer)
@@ -2149,6 +2484,8 @@ Players.PlayerRemoving:Connect(function(removingPlayer)
     end
     -- Refresh teleport player list
     refreshPlayerList()
+    -- Refresh kick player list
+    refreshKickPlayerList()
 end)
 
 -- Initialize category positions
@@ -2156,6 +2493,9 @@ updateCategoryPositions()
 
 -- Initialize teleport player list
 refreshPlayerList()
+
+-- Initialize kick player list
+refreshKickPlayerList()
 
 print("[SYSTEM] .SYSTEM: INITIALIZED")
 print("[KEYBINDS] X:SPEED F:FLY J:INFINITE_JUMP H:HIGH_JUMP L:LINE_PLAYER")
