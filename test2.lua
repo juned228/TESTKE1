@@ -1507,15 +1507,22 @@ local function teleportToTargetPlayer()
 
     if not selectedTeleportPlayer then
         print("[TELEPORT_DEBUG] No player selected!")
-        showNotification("TELEPORT: NO_PLAYER_SELECTED")
+        showNotification("❌ TELEPORT: TIDAK ADA PLAYER YANG DIPILIH")
         return
     end
 
     print("[TELEPORT_DEBUG] Selected player:", selectedTeleportPlayer.Name)
 
+    -- Check if target player exists and is in the game
+    if not selectedTeleportPlayer.Parent then
+        print("[TELEPORT_DEBUG] Target player is not in the game!")
+        showNotification("❌ TELEPORT: PLAYER SUDAH KELUAR DARI GAME")
+        return
+    end
+
     if not selectedTeleportPlayer.Character then
         print("[TELEPORT_DEBUG] Selected player has no character!")
-        showNotification("TELEPORT: TARGET_NO_CHARACTER")
+        showNotification("❌ TELEPORT: PLAYER BELUM MEMPUNYAI KARAKTER")
         return
     end
 
@@ -1524,7 +1531,7 @@ local function teleportToTargetPlayer()
 
     if not targetHumanoidRootPart then
         print("[TELEPORT_DEBUG] Target has no HumanoidRootPart!")
-        showNotification("TELEPORT: TARGET_ROOTPART_MISSING")
+        showNotification("❌ TELEPORT: KARAKTER TARGET RUSAK (TIDAK ADA HUMANOIDROOTPART)")
         return
     end
 
@@ -1532,14 +1539,14 @@ local function teleportToTargetPlayer()
     local localCharacter = player.Character
     if not localCharacter then
         print("[TELEPORT_DEBUG] Local player has no character!")
-        showNotification("TELEPORT: LOCAL_CHARACTER_MISSING")
+        showNotification("❌ TELEPORT: KAMU BELUM MEMPUNYAI KARAKTER")
         return
     end
 
     local localHumanoidRootPart = localCharacter:FindFirstChild("HumanoidRootPart")
     if not localHumanoidRootPart then
         print("[TELEPORT_DEBUG] Local player has no HumanoidRootPart!")
-        showNotification("TELEPORT: LOCAL_ROOTPART_MISSING")
+        showNotification("❌ TELEPORT: KARAKTERMU RUSAK (TIDAK ADA HUMANOIDROOTPART)")
         return
     end
 
@@ -1547,19 +1554,78 @@ local function teleportToTargetPlayer()
     local targetCFrame = targetHumanoidRootPart.CFrame
     local targetPosition = targetCFrame.Position
     local localPosition = localHumanoidRootPart.CFrame.Position
+    local distance = (targetPosition - localPosition).Magnitude
 
     print("[TELEPORT_DEBUG] Target position:", targetPosition)
     print("[TELEPORT_DEBUG] Current local position:", localPosition)
-    print("[TELEPORT_DEBUG] Distance to target:", (targetPosition - localPosition).Magnitude)
+    print("[TELEPORT_DEBUG] Distance to target:", distance)
 
-    -- Perform teleport - directly to target player's exact position (offset up slightly to avoid collision)
-    local teleportOffset = Vector3.new(0, 5, 0) -- Teleport 5 studs above target
-    localHumanoidRootPart.CFrame = targetCFrame + teleportOffset
+    -- Display distance info
+    if distance < 100 then
+        showNotification("📍 JARAK: " .. math.floor(distance) .. " studs - SANGAT DEKAT")
+    elseif distance < 1000 then
+        showNotification("📍 JARAK: " .. math.floor(distance) .. " studs - SEDANG")
+    else
+        showNotification("📍 JARAK: " .. math.floor(distance) .. " studs - JAUH")
+    end
 
-    print("[TELEPORT_DEBUG] Teleport completed!")
-    print("[TELEPORT_DEBUG] New local position:", localHumanoidRootPart.CFrame.Position)
+    -- Check for workspace streaming limitations (Roblox has distance limits for object streaming)
+    if distance > 100000 then  -- Very far distances might have issues
+        showNotification("⚠️ PERINGATAN: JARAK TERLALU JAUH, TELEPORT MUNGKIN GAGAL")
+    end
 
-    showNotification("TELEPORT: SUCCESS_TO_" .. selectedTeleportPlayer.Name:upper())
+    -- Perform teleport with multiple attempts if needed
+    local maxAttempts = 3
+    local teleportSuccess = false
+
+    for attempt = 1, maxAttempts do
+        print("[TELEPORT_DEBUG] Attempting teleport - Attempt " .. attempt .. "/" .. maxAttempts)
+
+        -- Try to teleport with different offsets to avoid collisions
+        local teleportOffset = Vector3.new(0, 5 + (attempt - 1) * 2, 0) -- Increase height with each attempt
+
+        -- Use CFrame for more reliable teleporting
+        local teleportCFrame = targetCFrame + teleportOffset
+
+        -- Check if the target position is valid
+        local raycastParams = RaycastParams.new()
+        raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
+        raycastParams.FilterDescendantsInstances = {localCharacter}
+
+        local raycastResult = workspace:Raycast(teleportCFrame.Position, Vector3.new(0, -10, 0), raycastParams)
+
+        if raycastResult then
+            print("[TELEPORT_DEBUG] Ground detected at distance:", raycastResult.Distance)
+            -- Adjust teleport position to be on safe ground
+            teleportCFrame = CFrame.new(raycastResult.Position + Vector3.new(0, 3, 0))
+        end
+
+        -- Perform the teleport
+        localHumanoidRootPart.CFrame = teleportCFrame
+
+        -- Small delay to allow teleport to complete
+        wait(0.1)
+
+        -- Verify teleport success
+        local newPosition = localHumanoidRootPart.CFrame.Position
+        local newDistance = (targetPosition - newPosition).Magnitude
+
+        if newDistance < 50 then
+            teleportSuccess = true
+            print("[TELEPORT_DEBUG] Teleport successful! New distance:", newDistance)
+            break
+        else
+            print("[TELEPORT_DEBUG] Teleport attempt failed. New distance:", newDistance)
+        end
+    end
+
+    if teleportSuccess then
+        showNotification("✅ TELEPORT: BERHASIL KE " .. selectedTeleportPlayer.Name:upper())
+        print("[TELEPORT_DEBUG] New local position:", localHumanoidRootPart.CFrame.Position)
+    else
+        showNotification("❌ TELEPORT: GAGAL - AREA MUNGKIN DILINDUNGI ATAU TERLALU JAUH")
+        print("[TELEPORT_DEBUG] All teleport attempts failed")
+    end
 end
 
 
@@ -2094,56 +2160,76 @@ local function removeCarryEffect(targetPlayer)
     end
 end
 
-  -- Rope/Chain System for Carrying Players - Simplified to prevent admin stuck
-local function createRopeConnection(targetPlayer)
+  -- Physical Carry System - Direct movement control without permissions
+local function createPhysicalCarry(targetPlayer)
     if not targetPlayer or not targetPlayer.Character or not character or not character:FindFirstChild("HumanoidRootPart") then
         return nil
     end
 
     local targetRootPart = targetPlayer.Character:FindFirstChild("HumanoidRootPart")
+    local targetHumanoid = targetPlayer.Character:FindFirstChild("Humanoid")
     local adminRootPart = character.HumanoidRootPart
 
-    if not targetRootPart then return nil end
+    if not targetRootPart or not targetHumanoid then return nil end
 
-    -- Remove existing rope if any
+    -- Remove existing carry systems if any
     local existingRope = targetPlayer.Character:FindFirstChild("CarryRope")
     if existingRope then
         existingRope:Destroy()
     end
 
-    -- Create a simple rope constraint only (no complex segments)
+    local existingWeld = targetRootPart:FindFirstChild("CarryWeld")
+    if existingWeld then
+        existingWeld:Destroy()
+    end
+
+    -- Disable player movement completely
+    targetHumanoid.WalkSpeed = 0
+    targetHumanoid.JumpPower = 0
+    targetHumanoid.PlatformStand = true
+    targetHumanoid:SetStateEnabled(Enum.HumanoidStateType.Falling, false)
+    targetHumanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, false)
+    targetHumanoid:SetStateEnabled(Enum.HumanoidStateType.Freefall, false)
+    targetHumanoid:SetStateEnabled(Enum.HumanoidStateType.Swimming, false)
+    targetHumanoid:ChangeState(Enum.HumanoidStateType.PlatformStand)
+
+    -- Disable all player controls
+    local playerScripts = targetPlayer.Character:FindFirstChild("PlayerScripts")
+    if playerScripts then
+        playerScripts:Destroy()
+    end
+
+    -- Create visual rope effect (optional)
     local rope = Instance.new("RopeConstraint")
     rope.Name = "CarryRope"
     rope.Parent = targetPlayer.Character
 
-    -- Create attachments (position offset to prevent interference)
     local adminAttachment = Instance.new("Attachment")
     adminAttachment.Name = "RopeAttachment_Admin"
-    adminAttachment.Position = Vector3.new(0, 1, 0) -- Slightly above admin center
+    adminAttachment.Position = Vector3.new(0, 2, 0)
     adminAttachment.Parent = adminRootPart
 
     local playerAttachment = Instance.new("Attachment")
     playerAttachment.Name = "RopeAttachment_Player"
-    playerAttachment.Position = Vector3.new(0, 0, 0) -- Center of player
+    playerAttachment.Position = Vector3.new(0, 0, 0)
     playerAttachment.Parent = targetRootPart
 
-    -- Configure rope
     rope.Attachment0 = adminAttachment
     rope.Attachment1 = playerAttachment
-    rope.Length = 10 -- Longer rope length to prevent interference
-    rope.Thickness = 0.3 -- Thicker visual rope
-    rope.Color = Color3.new(0.6, 0.4, 0.2) -- Brown rope color
+    rope.Length = 5
+    rope.Thickness = 0.5
+    rope.Color = Color3.new(0.8, 0.4, 0)
     rope.Visible = true
     rope.Enabled = true
 
-    -- Create simple rope visual (single beam instead of multiple segments)
+    -- Create rope visual
     local ropeVisual = Instance.new("Beam")
     ropeVisual.Name = "RopeBeam"
     ropeVisual.Parent = targetPlayer.Character
     ropeVisual.Attachment0 = adminAttachment
     ropeVisual.Attachment1 = playerAttachment
-    ropeVisual.Width0 = 0.3
-    ropeVisual.Width1 = 0.3
+    ropeVisual.Width0 = 0.5
+    ropeVisual.Width1 = 0.5
     ropeVisual.Color = ColorSequence.new(Color3.new(0.6, 0.4, 0.2))
     ropeVisual.LightEmission = 0.1
     ropeVisual.Texture = "rbxasset://textures/rope.png"
@@ -2519,47 +2605,166 @@ local function startCarryingPlayers()
     carryStatusDisplay.Text = "STATUS: " .. carryStyle.DisplayName:upper()
     carryStatusDisplay.TextColor3 = colors.text
 
-    -- Add players to carriedPlayers table and create rope connections
+    -- Add players to carriedPlayers table and create physical carry
     for _, targetPlayer in ipairs(selectedCarryPlayers) do
         carriedPlayers[targetPlayer] = carryStyle
 
-        -- Create rope connection for each player
-        local ropeConnection = createRopeConnection(targetPlayer)
-        if ropeConnection then
-            -- Store rope connection for cleanup
-            targetPlayer.RopeConnection = ropeConnection
+        -- Create physical carry for each player
+        local carryConnection = createPhysicalCarry(targetPlayer)
+        if carryConnection then
+            -- Store carry connection for cleanup
+            targetPlayer.CarryConnection = carryConnection
 
-            -- Add visual rope carry effect with struggle animation
+            -- Add visual carry effect with struggle animation
             addCarryEffect(targetPlayer, carryStyles.Rope)
+
+            -- Apply drag effect for physics
+            local targetRootPart = targetPlayer.Character:FindFirstChild("HumanoidRootPart")
+            if targetRootPart then
+                local function applyDragEffect()
+                    if not targetRootPart or not targetRootPart.Parent then return end
+
+                    -- Create strong pulling force towards admin
+                    local bodyVelocity = Instance.new("BodyVelocity")
+                    bodyVelocity.Name = "DragVelocity"
+                    bodyVelocity.MaxForce = Vector3.new(40000, 20000, 40000)
+                    bodyVelocity.P = 5000
+                    bodyVelocity.Velocity = Vector3.new(0, 0, 0)
+                    bodyVelocity.Parent = targetRootPart
+
+                    -- Add spinning/rotating effect to show struggle
+                    local bodyAngularVelocity = Instance.new("BodyAngularVelocity")
+                    bodyAngularVelocity.Name = "DragSpin"
+                    bodyAngularVelocity.MaxTorque = Vector3.new(20000, 20000, 20000)
+                    bodyAngularVelocity.P = 5000
+                    bodyAngularVelocity.AngularVelocity = Vector3.new(math.random(-3, 3), math.random(-3, 3), math.random(-3, 3))
+                    bodyAngularVelocity.Parent = targetRootPart
+
+                    -- Add slight upward force to prevent player from getting stuck in ground
+                    local bodyForce = Instance.new("BodyForce")
+                    bodyForce.Name = "AntiGroundForce"
+                    bodyForce.Force = Vector3.new(0, 500, 0)
+                    bodyForce.Parent = targetRootPart
+                end
+
+                applyDragEffect()
+            end
         end
     end
 
-    showNotification("CARRY_MODE: " .. carryStyle.DisplayName:upper() .. " (" .. #selectedCarryPlayers .. " PLAYERS)", "Success")
+    showNotification("🎯 MODE CARRY: " .. carryStyle.DisplayName:upper() .. " - " .. #selectedCarryPlayers .. " PLAYER", "Success")
 
     -- Create stop carry GUI
     createStopCarryGui()
 
-    -- Function to maintain rope carry without interfering with admin movement
+    -- Function to maintain physical carry with direct position control
     local function updateCarryPositions()
         if not isCarryModeActive or not character or not character:FindFirstChild("HumanoidRootPart") then
             return
         end
 
-        -- Simple update function - rope physics handles the dragging
-        -- We only need to ensure players stay in PlatformStand state
+        local adminCFrame = character.HumanoidRootPart.CFrame
+        local adminPosition = adminCFrame.Position
+        local maxCarryRange = 100 -- Maximum range for normal carry (in studs)
+        local forceTeleportRange = 200 -- Force teleport if beyond this range
+
         for i, targetPlayer in ipairs(selectedCarryPlayers) do
-            if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("Humanoid") then
+            if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                local targetRootPart = targetPlayer.Character.HumanoidRootPart
                 local targetHumanoid = targetPlayer.Character:FindFirstChild("Humanoid")
 
-                -- Maintain player restrictions without affecting admin
-                if targetHumanoid then
+                if targetHumanoid and targetRootPart then
+                    -- Calculate carry position based on player index
+                    local carryAngle = (i - 1) * (2 * math.pi / math.max(#selectedCarryPlayers, 1))
+                    local carryRadius = 4 + (i - 1) * 1.5 -- Spread players in circle
+                    local carryHeight = 3 + (i - 1) * 0.5 -- Stagger heights slightly
+
+                    -- Calculate target position
+                    local offsetX = math.cos(carryAngle) * carryRadius
+                    local offsetZ = math.sin(carryAngle) * carryRadius
+
+                    -- Calculate target position relative to admin
+                    local targetOffset = Vector3.new(offsetX, carryHeight, offsetZ)
+                    local targetPosition = adminPosition + targetOffset
+
+                    -- Check distance to target
+                    local currentDistance = (targetRootPart.Position - adminPosition).Magnitude
+
+                    -- Force teleport if player is too far away
+                    if currentDistance > forceTeleportRange then
+                        -- Emergency teleport - player is way too far
+                        local teleportCFrame = CFrame.new(targetPosition)
+                        targetRootPart.CFrame = teleportCFrame
+
+                        -- Show notification for forced teleport
+                        if not targetPlayer.LastTeleportWarning or (tick() - targetPlayer.LastTeleportWarning) > 5 then
+                            showNotification("⚠️ TELEPORT PAKSA: " .. targetPlayer.Name .. " TERLALU JAUH!", "Warning")
+                            targetPlayer.LastTeleportWarning = tick()
+                        end
+
+                        print("[CARRY_DEBUG] Force teleporting " .. targetPlayer.Name .. " from distance " .. currentDistance)
+                    elseif currentDistance > maxCarryRange then
+                        -- Player is getting far, increase pulling force
+                        local dragVelocity = targetRootPart:FindFirstChild("DragVelocity")
+                        if dragVelocity then
+                            -- Stronger velocity for distant players
+                            local desiredVelocity = (targetPosition - targetRootPart.Position) * 20
+                            dragVelocity.MaxForce = Vector3.new(80000, 40000, 80000) -- Double force
+                            dragVelocity.Velocity = desiredVelocity
+                        end
+                    else
+                        -- Normal carry range, use standard force
+                        local dragVelocity = targetRootPart:FindFirstChild("DragVelocity")
+                        if dragVelocity then
+                            dragVelocity.MaxForce = Vector3.new(40000, 20000, 40000) -- Normal force
+                            local desiredVelocity = (targetPosition - targetRootPart.Position) * 10
+                            dragVelocity.Velocity = desiredVelocity
+                        end
+                    end
+
+                    -- Direct CFrame manipulation for precise control (if not force teleported)
+                    if currentDistance <= maxCarryRange then
+                        local targetCFrame = CFrame.new(targetPosition) * CFrame.Angles(
+                            math.rad(math.sin(tick() * 2 + i) * 15), -- Slight tilt for struggle effect
+                            math.rad(math.cos(tick() * 1.5 + i) * 15),
+                            math.rad(math.sin(tick() * 3 + i) * 20)
+                        )
+
+                        -- Apply position directly (bypass physics)
+                        targetRootPart.CFrame = targetCFrame
+                    end
+
+                    -- Ensure player can't move
                     targetHumanoid.WalkSpeed = 0
                     targetHumanoid.JumpPower = 0
                     targetHumanoid.PlatformStand = true
+                    targetHumanoid:SetStateEnabled(Enum.HumanoidStateType.Falling, false)
+                    targetHumanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, false)
+                    targetHumanoid:SetStateEnabled(Enum.HumanoidStateType.Freefall, false)
+                    targetHumanoid:SetStateEnabled(Enum.HumanoidStateType.Swimming, false)
 
-                    -- Keep player in PlatformStand state (but don't force it every frame)
                     if targetHumanoid:GetState() ~= Enum.HumanoidStateType.PlatformStand then
                         targetHumanoid:ChangeState(Enum.HumanoidStateType.PlatformStand)
+                    end
+
+                    -- Enhanced struggle effects for distant players
+                    local dragSpin = targetRootPart:FindFirstChild("DragSpin")
+                    if dragSpin and currentDistance > maxCarryRange then
+                        -- Increase spin when player is far (shows struggle)
+                        dragSpin.AngularVelocity = Vector3.new(
+                            math.random(-5, 5),
+                            math.random(-5, 5),
+                            math.random(-5, 5)
+                        )
+                        dragSpin.MaxTorque = Vector3.new(40000, 40000, 40000)
+                    elseif dragSpin then
+                        -- Normal spin for close players
+                        dragSpin.AngularVelocity = Vector3.new(
+                            math.random(-3, 3),
+                            math.random(-3, 3),
+                            math.random(-3, 3)
+                        )
+                        dragSpin.MaxTorque = Vector3.new(20000, 20000, 20000)
                     end
                 end
             end
@@ -2602,23 +2807,89 @@ local function startCarryingPlayers()
         end
     end
 
-    -- Add safety check every 0.5 seconds to ensure carry mode persists (reduced frequency)
+    -- Add enhanced safety check with auto-teleport for distant players
     local safetyConnection = RunService.Heartbeat:Connect(function()
-        if isCarryModeActive then
-            for _, targetPlayer in ipairs(selectedCarryPlayers) do
-                if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("Humanoid") then
-                    local targetHumanoid = targetPlayer.Character.Humanoid
+        if isCarryModeActive and character and character:FindFirstChild("HumanoidRootPart") then
+            local adminPosition = character.HumanoidRootPart.Position
+            local emergencyTeleportRange = 300 -- Emergency teleport distance
 
-                    -- Force carry settings to persist (less frequent checks)
-                    if targetHumanoid.WalkSpeed ~= 0 then
+            for _, targetPlayer in ipairs(selectedCarryPlayers) do
+                if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                    local targetRootPart = targetPlayer.Character.HumanoidRootPart
+                    local targetHumanoid = targetPlayer.Character:FindFirstChild("Humanoid")
+
+                    if targetHumanoid and targetRootPart then
+                        local currentDistance = (targetRootPart.Position - adminPosition).Magnitude
+
+                        -- Emergency teleport for extremely distant players
+                        if currentDistance > emergencyTeleportRange then
+                            -- Calculate safe teleport position
+                            local teleportOffset = Vector3.new(
+                                math.random(-5, 5),  -- Small random offset
+                                5,  -- Safe height
+                                math.random(-5, 5)
+                            )
+                            local safeTeleportPosition = adminPosition + teleportOffset
+
+                            -- Force teleport with safety measures
+                            targetRootPart.CFrame = CFrame.new(safeTeleportPosition)
+
+                            -- Show emergency notification
+                            showNotification("🚨 EMERGENCY TELEPORT: " .. targetPlayer.Name .. " DIPAKSA KEMBALI!", "Emergency")
+
+                            -- Reset physics objects
+                            local dragVelocity = targetRootPart:FindFirstChild("DragVelocity")
+                            if dragVelocity then
+                                dragVelocity.Velocity = Vector3.new(0, 0, 0)
+                            end
+
+                            print("[CARRY_EMERGENCY] Emergency teleport for " .. targetPlayer.Name .. " from distance " .. currentDistance)
+
+                            -- Small delay after emergency teleport
+                            wait(0.1)
+                        end
+
+                        -- Force carry settings to persist (critical for escaped players)
                         targetHumanoid.WalkSpeed = 0
-                    end
-                    if targetHumanoid.JumpPower ~= 0 then
                         targetHumanoid.JumpPower = 0
-                    end
-                    if not targetHumanoid.PlatformStand then
                         targetHumanoid.PlatformStand = true
-                        targetHumanoid:ChangeState(Enum.HumanoidStateType.PlatformStand)
+                        targetHumanoid:SetStateEnabled(Enum.HumanoidStateType.Falling, false)
+                        targetHumanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, false)
+                        targetHumanoid:SetStateEnabled(Enum.HumanoidStateType.Freefall, false)
+                        targetHumanoid:SetStateEnabled(Enum.HumanoidStateType.Swimming, false)
+
+                        if targetHumanoid:GetState() ~= Enum.HumanoidStateType.PlatformStand then
+                            targetHumanoid:ChangeState(Enum.HumanoidStateType.PlatformStand)
+                        end
+
+                        -- Check and restore any missing physics components
+                        if not targetRootPart:FindFirstChild("DragVelocity") then
+                            -- Recreate drag velocity if missing
+                            local bodyVelocity = Instance.new("BodyVelocity")
+                            bodyVelocity.Name = "DragVelocity"
+                            bodyVelocity.MaxForce = Vector3.new(40000, 20000, 40000)
+                            bodyVelocity.P = 5000
+                            bodyVelocity.Velocity = Vector3.new(0, 0, 0)
+                            bodyVelocity.Parent = targetRootPart
+                        end
+
+                        if not targetRootPart:FindFirstChild("DragSpin") then
+                            -- Recreate drag spin if missing
+                            local bodyAngularVelocity = Instance.new("BodyAngularVelocity")
+                            bodyAngularVelocity.Name = "DragSpin"
+                            bodyAngularVelocity.MaxTorque = Vector3.new(20000, 20000, 20000)
+                            bodyAngularVelocity.P = 5000
+                            bodyAngularVelocity.AngularVelocity = Vector3.new(math.random(-3, 3), math.random(-3, 3), math.random(-3, 3))
+                            bodyAngularVelocity.Parent = targetRootPart
+                        end
+
+                        if not targetRootPart:FindFirstChild("AntiGroundForce") then
+                            -- Recreate anti-ground force if missing
+                            local bodyForce = Instance.new("BodyForce")
+                            bodyForce.Name = "AntiGroundForce"
+                            bodyForce.Force = Vector3.new(0, 500, 0)
+                            bodyForce.Parent = targetRootPart
+                        end
                     end
                 end
             end
@@ -2644,11 +2915,52 @@ local function stopCarryingPlayers()
             local targetRootPart = targetPlayer.Character.HumanoidRootPart
             local targetHumanoid = targetPlayer.Character:FindFirstChild("Humanoid")
 
-            -- Remove rope connection
-            removeRopeConnection(targetPlayer)
+            -- Remove physical carry components
+            local carryRope = targetPlayer.Character:FindFirstChild("CarryRope")
+            if carryRope then
+                carryRope:Destroy()
+            end
 
-            -- Clear rope connection reference
-            targetPlayer.RopeConnection = nil
+            -- Remove carry connections
+            targetPlayer.CarryConnection = nil
+
+            -- Remove physics components
+            if targetRootPart then
+                local dragVelocity = targetRootPart:FindFirstChild("DragVelocity")
+                if dragVelocity then
+                    dragVelocity:Destroy()
+                end
+
+                local dragSpin = targetRootPart:FindFirstChild("DragSpin")
+                if dragSpin then
+                    dragSpin:Destroy()
+                end
+
+                local antiGroundForce = targetRootPart:FindFirstChild("AntiGroundForce")
+                if antiGroundForce then
+                    antiGroundForce:Destroy()
+                end
+
+                local carryWeld = targetRootPart:FindFirstChild("CarryWeld")
+                if carryWeld then
+                    carryWeld:Destroy()
+                end
+
+                -- Remove attachments
+                local ropeAttachment = targetRootPart:FindFirstChild("RopeAttachment_Player")
+                if ropeAttachment then
+                    ropeAttachment:Destroy()
+                end
+            end
+
+            -- Remove admin side attachments
+            if character and character:FindFirstChild("HumanoidRootPart") then
+                local adminRootPart = character.HumanoidRootPart
+                local adminAttachment = adminRootPart:FindFirstChild("RopeAttachment_Admin")
+                if adminAttachment then
+                    adminAttachment:Destroy()
+                end
+            end
 
             -- Restore humanoid movement and states
             if targetHumanoid then
@@ -2656,10 +2968,11 @@ local function stopCarryingPlayers()
                 targetHumanoid.JumpPower = 50  -- Default jump power
                 targetHumanoid.PlatformStand = false
 
-                -- Re-enable humanoid states
+                -- Re-enable all humanoid states
                 targetHumanoid:SetStateEnabled(Enum.HumanoidStateType.Falling, true)
                 targetHumanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, true)
                 targetHumanoid:SetStateEnabled(Enum.HumanoidStateType.Freefall, true)
+                targetHumanoid:SetStateEnabled(Enum.HumanoidStateType.Swimming, true)
 
                 -- Force humanoid back to normal state
                 targetHumanoid:ChangeState(Enum.HumanoidStateType.Running)
@@ -2687,7 +3000,7 @@ local function stopCarryingPlayers()
         stopGui:Destroy()
     end
 
-    showNotification("CARRY_MODE: STOPPED", "Info")
+    showNotification("✅ MODE CARRY: DIHENTIKAN - SEMUA PLAYER DIBEBASKAN", "Info")
 end
 
 -- Button Events
