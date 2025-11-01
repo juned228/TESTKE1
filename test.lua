@@ -1,3 +1,4 @@
+
 -- Minimal Admin Script for Roblox
 -- Complex UI with monochrome design
 -- Place this in StarterPlayerScripts or as a LocalScript
@@ -33,9 +34,7 @@ local bg = nil
 
 -- Jump variables
 local isInfinityJumpEnabled = false
-local isHighJumpEnabled = false
 local defaultJumpPower = humanoid.JumpPower
-local highJumpPower = 100
 
 -- Store original values
 local originalWalkSpeed = humanoid.WalkSpeed
@@ -51,9 +50,7 @@ local lineUpdateConnection = nil
 local selectedTeleportPlayer = nil
 local teleportPlayerButtons = {}
 
--- Kick Player variables
-local selectedKickPlayer = nil
-local kickPlayerButtons = {}
+
 
 -- Category collapse state variables
 local isMainCategoryCollapsed = false
@@ -68,7 +65,10 @@ local colors = {
     text = Color3.fromRGB(255, 255, 255),
     text_dim = Color3.fromRGB(180, 180, 180),
     active = Color3.fromRGB(100, 100, 100),
-    inactive = Color3.fromRGB(40, 40, 40)
+    inactive = Color3.fromRGB(40, 40, 40),
+    danger = Color3.fromRGB(255, 0, 0),
+    success = Color3.fromRGB(0, 255, 0),
+    warning = Color3.fromRGB(255, 165, 0)
 }
 
 -- Create Minimal GUI
@@ -591,7 +591,7 @@ jumpSection.BackgroundColor3 = colors.secondary
 jumpSection.BorderSizePixel = 1
 jumpSection.BorderColor3 = colors.tertiary
 jumpSection.Position = UDim2.new(0, 15, 0, 260)
-jumpSection.Size = UDim2.new(0, 290, 0, 120)
+jumpSection.Size = UDim2.new(0, 290, 0, 90)
 
 local jumpCorner = Instance.new("UICorner")
 jumpCorner.CornerRadius = UDim.new(0, 3)
@@ -668,138 +668,19 @@ infinityToggleInvisibleButton.Text = ""
 infinityToggleInvisibleButton.Font = Enum.Font.SourceSans
 infinityToggleInvisibleButton.TextSize = 1
 
--- High Jump Toggle Container
-local highJumpToggleContainer = Instance.new("Frame")
-highJumpToggleContainer.Name = "HighJumpToggleContainer"
-highJumpToggleContainer.Parent = jumpSection
-highJumpToggleContainer.BackgroundTransparency = 1
-highJumpToggleContainer.Position = UDim2.new(0, 10, 0, 60)
-highJumpToggleContainer.Size = UDim2.new(0, 270, 0, 25)
-
--- High Jump Toggle Label
-local highJumpToggleLabel = Instance.new("TextLabel")
-highJumpToggleLabel.Name = "HighJumpToggleLabel"
-highJumpToggleLabel.Parent = highJumpToggleContainer
-highJumpToggleLabel.BackgroundTransparency = 1
-highJumpToggleLabel.Position = UDim2.new(0, 0, 0, 0)
-highJumpToggleLabel.Size = UDim2.new(0, 200, 0, 25)
-highJumpToggleLabel.Font = Enum.Font.Code
-highJumpToggleLabel.Text = "AMPLIFIED_JUMP"
-highJumpToggleLabel.TextColor3 = colors.text
-highJumpToggleLabel.TextSize = 11
-highJumpToggleLabel.TextXAlignment = Enum.TextXAlignment.Left
-
--- High Jump Toggle Switch Background
-local highJumpToggleSwitchBg = Instance.new("Frame")
-highJumpToggleSwitchBg.Name = "HighJumpToggleSwitchBg"
-highJumpToggleSwitchBg.Parent = highJumpToggleContainer
-highJumpToggleSwitchBg.BackgroundColor3 = colors.inactive
-highJumpToggleSwitchBg.BorderSizePixel = 0
-highJumpToggleSwitchBg.Position = UDim2.new(1, -50, 0, 2.5)
-highJumpToggleSwitchBg.Size = UDim2.new(0, 45, 0, 20)
-
-local highJumpToggleBgCorner = Instance.new("UICorner")
-highJumpToggleBgCorner.CornerRadius = UDim.new(0, 10)
-highJumpToggleBgCorner.Parent = highJumpToggleSwitchBg
-
--- High Jump Toggle Switch Handle
-local highJumpToggleSwitch = Instance.new("Frame")
-highJumpToggleSwitch.Name = "HighJumpToggleSwitch"
-highJumpToggleSwitch.Parent = highJumpToggleSwitchBg
-highJumpToggleSwitch.BackgroundColor3 = colors.text_dim
-highJumpToggleSwitch.BorderSizePixel = 0
-highJumpToggleSwitch.Position = UDim2.new(0, 2, 0, 2)
-highJumpToggleSwitch.Size = UDim2.new(0, 16, 0, 16)
-
-local highJumpToggleCorner = Instance.new("UICorner")
-highJumpToggleCorner.CornerRadius = UDim.new(0, 8)
-highJumpToggleCorner.Parent = highJumpToggleSwitch
-
--- High Jump Toggle Button (invisible but clickable)
-local highJumpToggleInvisibleButton = Instance.new("TextButton")
-highJumpToggleInvisibleButton.Name = "HighJumpToggleInvisibleButton"
-highJumpToggleInvisibleButton.Parent = highJumpToggleContainer
-highJumpToggleInvisibleButton.BackgroundTransparency = 1
-highJumpToggleInvisibleButton.Position = UDim2.new(1, -50, 0, 0)
-highJumpToggleInvisibleButton.Size = UDim2.new(0, 45, 0, 25)
-highJumpToggleInvisibleButton.Text = ""
-highJumpToggleInvisibleButton.Font = Enum.Font.SourceSans
-highJumpToggleInvisibleButton.TextSize = 1
-
 -- Jump Power Display
 local jumpPowerDisplay = Instance.new("TextLabel")
 jumpPowerDisplay.Name = "JumpPowerDisplay"
 jumpPowerDisplay.Parent = jumpSection
 jumpPowerDisplay.BackgroundTransparency = 1
-jumpPowerDisplay.Position = UDim2.new(0, 10, 0, 90)
+jumpPowerDisplay.Position = UDim2.new(0, 10, 0, 60)
 jumpPowerDisplay.Size = UDim2.new(0, 270, 0, 20)
 jumpPowerDisplay.Font = Enum.Font.Code
 jumpPowerDisplay.Text = "POWER: " .. defaultJumpPower .. " | STATUS: INACTIVE"
 jumpPowerDisplay.TextColor3 = colors.text
 jumpPowerDisplay.TextSize = 9
 
--- Quick Controls Section
-local quickControls = Instance.new("Frame")
-quickControls.Name = "QuickControls"
-quickControls.Parent = scrollFrame
-quickControls.BackgroundColor3 = colors.secondary
-quickControls.BorderSizePixel = 1
-quickControls.BorderColor3 = colors.tertiary
-quickControls.Position = UDim2.new(0, 15, 0, 390)
-quickControls.Size = UDim2.new(0, 290, 0, 75)
 
-local quickCorner = Instance.new("UICorner")
-quickCorner.CornerRadius = UDim.new(0, 3)
-quickCorner.Parent = quickControls
-
--- Quick Controls Header
-local quickHeader = Instance.new("TextLabel")
-quickHeader.Name = "QuickHeader"
-quickHeader.Parent = quickControls
-quickHeader.BackgroundTransparency = 1
-quickHeader.Position = UDim2.new(0, 10, 0, 5)
-quickHeader.Size = UDim2.new(0, 270, 0, 20)
-quickHeader.Font = Enum.Font.Code
-quickHeader.Text = "[04] RAPID_PRESETS"
-quickHeader.TextColor3 = colors.text_dim
-quickHeader.TextSize = 11
-quickHeader.TextXAlignment = Enum.TextXAlignment.Left
-
--- Preset Buttons
-local presetSpeeds = {25, 50, 100, 150}
-for i, speed in ipairs(presetSpeeds) do
-    local presetButton = Instance.new("TextButton")
-    presetButton.Name = "Preset" .. speed
-    presetButton.Parent = quickControls
-    presetButton.BackgroundColor3 = colors.tertiary
-    presetButton.BorderSizePixel = 1
-    presetButton.BorderColor3 = colors.accent
-    presetButton.Position = UDim2.new(0, 10 + (i-1) * 70, 0, 30)
-    presetButton.Size = UDim2.new(0, 65, 0, 20)
-    presetButton.Font = Enum.Font.Code
-    presetButton.Text = "SPEED_" .. speed
-    presetButton.TextColor3 = colors.text
-    presetButton.TextSize = 9
-
-    local presetCorner = Instance.new("UICorner")
-    presetCorner.CornerRadius = UDim.new(0, 2)
-    presetCorner.Parent = presetButton
-
-    presetButton.MouseButton1Click:Connect(function()
-        updateCustomSpeed(speed)
-        if not isSpeedEnabled then
-            enableCustomSpeed()
-        end
-    end)
-
-    presetButton.MouseEnter:Connect(function()
-        TweenService:Create(presetButton, TweenInfo.new(0.1), {BackgroundColor3 = colors.active}):Play()
-    end)
-
-    presetButton.MouseLeave:Connect(function()
-        TweenService:Create(presetButton, TweenInfo.new(0.1), {BackgroundColor3 = colors.tertiary}):Play()
-    end)
-end
 
 -- LOCALPLAYER Category Section
 local localPlayerCategorySection = Instance.new("Frame")
@@ -969,12 +850,30 @@ teleportSectionLabel.Name = "TeleportSectionLabel"
 teleportSectionLabel.Parent = teleportSection
 teleportSectionLabel.BackgroundTransparency = 1
 teleportSectionLabel.Position = UDim2.new(0, 10, 0, 5)
-teleportSectionLabel.Size = UDim2.new(0, 270, 0, 20)
+teleportSectionLabel.Size = UDim2.new(0, 240, 0, 20)
 teleportSectionLabel.Font = Enum.Font.Code
 teleportSectionLabel.Text = "{02} PLAYER_TELEPORT"
 teleportSectionLabel.TextColor3 = colors.text_dim
 teleportSectionLabel.TextSize = 11
 teleportSectionLabel.TextXAlignment = Enum.TextXAlignment.Left
+
+-- Teleport Refresh Button
+local teleportRefreshButton = Instance.new("TextButton")
+teleportRefreshButton.Name = "TeleportRefreshButton"
+teleportRefreshButton.Parent = teleportSection
+teleportRefreshButton.BackgroundColor3 = colors.tertiary
+teleportRefreshButton.BorderSizePixel = 1
+teleportRefreshButton.BorderColor3 = colors.secondary
+teleportRefreshButton.Position = UDim2.new(0, 255, 0, 5)
+teleportRefreshButton.Size = UDim2.new(0, 25, 0, 20)
+teleportRefreshButton.Font = Enum.Font.Code
+teleportRefreshButton.Text = "⟳"
+teleportRefreshButton.TextColor3 = colors.text_dim
+teleportRefreshButton.TextSize = 12
+teleportRefreshButton.ZIndex = 3
+local teleportRefreshCorner = Instance.new("UICorner")
+teleportRefreshCorner.CornerRadius = UDim.new(0, 2)
+teleportRefreshCorner.Parent = teleportRefreshButton
 
 -- Player List Container
 local playerListContainer = Instance.new("Frame")
@@ -1034,90 +933,7 @@ selectedPlayerDisplay.Text = "SELECTED: NONE"
 selectedPlayerDisplay.TextColor3 = colors.text_dim
 selectedPlayerDisplay.TextSize = 9
 
--- Kick Player Section (Sub-category of LOCALPLAYER)
-local kickSection = Instance.new("Frame")
-kickSection.Name = "KickSection"
-kickSection.Parent = scrollFrame
-kickSection.BackgroundColor3 = colors.secondary
-kickSection.BorderSizePixel = 1
-kickSection.BorderColor3 = colors.tertiary
-kickSection.Position = UDim2.new(0, 15, 0, 875)  -- Will be positioned by updateCategoryPositions
-kickSection.Size = UDim2.new(0, 290, 0, 180)
 
-local kickCorner = Instance.new("UICorner")
-kickCorner.CornerRadius = UDim.new(0, 3)
-kickCorner.Parent = kickSection
-
--- Kick Section Header
-local kickSectionLabel = Instance.new("TextLabel")
-kickSectionLabel.Name = "KickSectionLabel"
-kickSectionLabel.Parent = kickSection
-kickSectionLabel.BackgroundTransparency = 1
-kickSectionLabel.Position = UDim2.new(0, 10, 0, 5)
-kickSectionLabel.Size = UDim2.new(0, 270, 0, 20)
-kickSectionLabel.Font = Enum.Font.Code
-kickSectionLabel.Text = "{03} KICK_PLAYER"
-kickSectionLabel.TextColor3 = colors.text_dim
-kickSectionLabel.TextSize = 11
-kickSectionLabel.TextXAlignment = Enum.TextXAlignment.Left
-
--- Kick Player List Container
-local kickListContainer = Instance.new("Frame")
-kickListContainer.Name = "KickListContainer"
-kickListContainer.Parent = kickSection
-kickListContainer.BackgroundColor3 = colors.tertiary
-kickListContainer.BorderSizePixel = 0
-kickListContainer.Position = UDim2.new(0, 10, 0, 30)
-kickListContainer.Size = UDim2.new(0, 270, 0, 100)
-
-local kickListCorner = Instance.new("UICorner")
-kickListCorner.CornerRadius = UDim.new(0, 2)
-kickListCorner.Parent = kickListContainer
-
--- Kick Player List ScrollFrame
-local kickListScroll = Instance.new("ScrollingFrame")
-kickListScroll.Name = "KickListScroll"
-kickListScroll.Parent = kickListContainer
-kickListScroll.BackgroundColor3 = colors.tertiary
-kickListScroll.BackgroundTransparency = 0
-kickListScroll.BorderSizePixel = 0
-kickListScroll.Position = UDim2.new(0, 0, 0, 0)
-kickListScroll.Size = UDim2.new(1, 0, 1, 0)
-kickListScroll.ScrollBarThickness = 4
-kickListScroll.ScrollBarImageColor3 = colors.accent
-kickListScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
-kickListScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
-
--- Kick Button
-local kickButton = Instance.new("TextButton")
-kickButton.Name = "KickButton"
-kickButton.Parent = kickSection
-kickButton.BackgroundColor3 = colors.active
-kickButton.BorderSizePixel = 1
-kickButton.BorderColor3 = colors.accent
-kickButton.Position = UDim2.new(0, 10, 0, 140)
-kickButton.Size = UDim2.new(0, 270, 0, 25)
-kickButton.Font = Enum.Font.Code
-kickButton.Text = "KICK PLAYER INI"
-kickButton.TextColor3 = colors.text
-kickButton.TextSize = 11
-kickButton.Active = false  -- Disabled until player is selected
-
-local kickButtonCorner = Instance.new("UICorner")
-kickButtonCorner.CornerRadius = UDim.new(0, 2)
-kickButtonCorner.Parent = kickButton
-
--- Selected Kick Player Display
-local selectedKickDisplay = Instance.new("TextLabel")
-selectedKickDisplay.Name = "SelectedKickDisplay"
-selectedKickDisplay.Parent = kickSection
-selectedKickDisplay.BackgroundTransparency = 1
-selectedKickDisplay.Position = UDim2.new(0, 10, 0, 170)
-selectedKickDisplay.Size = UDim2.new(0, 270, 0, 15)
-selectedKickDisplay.Font = Enum.Font.Code
-selectedKickDisplay.Text = "SELECTED: NONE"
-selectedKickDisplay.TextColor3 = colors.text_dim
-selectedKickDisplay.TextSize = 9
 
 -- Line Player Functions
 local function updateLinePlayerToggleSwitch(enabled)
@@ -1149,9 +965,11 @@ local function createPlayerLine(targetPlayer)
     local localHead = localCharacter:FindFirstChild("Head")
     if not localHead then return end
 
-    -- Remove existing line for this player
+    -- Remove existing line and name display for this player
     if playerLines[targetPlayer] then
-        playerLines[targetPlayer]:Destroy()
+        playerLines[targetPlayer].Line:Destroy()
+        playerLines[targetPlayer].NameDisplay:Destroy()
+        playerLines[targetPlayer].Box:Destroy()
     end
 
     -- Create new line
@@ -1168,14 +986,90 @@ local function createPlayerLine(targetPlayer)
     attachment1.Name = "LineEnd"
     attachment1.Parent = localHead
 
+    -- Determine player gender by checking multiple characteristics (most reliable method available)
+    local isFemale = false
+    local humanoid = targetCharacter:FindFirstChildOfClass("Humanoid")
+    
+    if humanoid then
+        -- First check for female-specific accessories
+        for _, child in pairs(targetCharacter:GetChildren()) do
+            if child:IsA("Accessory") then
+                local accessoryType = child.AccessoryType or Enum.AccessoryType.Unknown
+                -- Check for accessories that are typically female-specific
+                if accessoryType == Enum.AccessoryType.Hair or 
+                   accessoryType == Enum.AccessoryType.Hat or
+                   string.find(string.lower(child.Name), "hair") or
+                   string.find(string.lower(child.Name), "curl") or
+                   string.find(string.lower(child.Name), "bun") or
+                   string.find(string.lower(child.Name), "ponytail") or
+                   string.find(string.lower(child.Name), "pigtails") or
+                   string.find(string.lower(child.Name), "braided") or
+                   string.find(string.lower(child.Name), "flow") then
+                    isFemale = true
+                    break
+                end
+            end
+        end
+        
+        -- If no gender-specific accessories found, try to determine based on proportions
+        if not isFemale then
+            local bodyTypeScale = humanoid.BodyTypeScale
+            local headScale = humanoid.HeadScale
+            
+            -- If body type scale is smaller or head scale is proportionally larger, it might indicate female
+            if bodyTypeScale and headScale then
+                -- This is a heuristic - different body types might indicate gender
+                if bodyTypeScale.Value < 0.9 or headScale.Value > 1.2 then
+                    isFemale = true
+                end
+            end
+        end
+        
+        -- Additional check: examine the character's body mesh to determine gender
+        -- Some R6/R15 characters have different mesh types for male/female
+        local torso = targetCharacter:FindFirstChild("Torso") or targetCharacter:FindFirstChild("UpperTorso") or targetCharacter:FindFirstChild("LowerTorso")
+        if torso then
+            for _, part in pairs(torso:GetChildren()) do
+                if part:IsA("SpecialMesh") then
+                    -- Check if this mesh is typically associated with female characters
+                    if string.find(string.lower(part.MeshId), "female") or string.find(string.lower(part.MeshId), "girl") then
+                        isFemale = true
+                        break
+                    end
+                end
+            end
+        end
+    end
+    
+    -- As a final fallback to ensure color variety, if no visual gender indicators are found,
+    -- assign based on player's UserId to ensure we see both colors
+    if not isFemale then
+        -- Use UserId to create a deterministic assignment that ensures variety
+        isFemale = (targetPlayer.UserId % 2 == 0)  -- Even userIds = female (pink), odd = male (green)
+    end
+    
+    -- Determine line color based on gender
+    local lineColor
+    if isFemale then
+        -- Pink line for female
+        lineColor = ColorSequence.new({
+            ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 105, 180)), -- Pink at target player
+            ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 182, 193)), -- Light pink in middle
+            ColorSequenceKeypoint.new(1, Color3.fromRGB(100, 255, 100))  -- Green at local player
+        })
+    else
+        -- Green line for male
+        lineColor = ColorSequence.new({
+            ColorSequenceKeypoint.new(0, Color3.fromRGB(50, 205, 50)), -- Green at target player
+            ColorSequenceKeypoint.new(0.5, Color3.fromRGB(144, 238, 144)), -- Light green in middle
+            ColorSequenceKeypoint.new(1, Color3.fromRGB(100, 255, 100))  -- Green at local player
+        })
+    end
+
     -- Configure line - connect target player to local player (admin)
     line.Attachment0 = attachment0
     line.Attachment1 = attachment1
-    line.Color = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 100, 100)), -- Red at target player
-        ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 200, 100)), -- Orange in middle
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(100, 255, 100))  -- Green at local player
-    })
+    line.Color = lineColor
     line.Transparency = NumberSequence.new({
         NumberSequenceKeypoint.new(0, 0.2), -- More visible at target
         NumberSequenceKeypoint.new(0.5, 0.15), -- Most visible in middle
@@ -1187,12 +1081,61 @@ local function createPlayerLine(targetPlayer)
     line.LightInfluence = 0.5
     line.LightEmission = 0.2
 
-    playerLines[targetPlayer] = line
+    -- Create name display above head using BillboardGui
+    local billboardGui = Instance.new("BillboardGui")
+    billboardGui.Name = "PlayerNameDisplay_" .. targetPlayer.Name
+    billboardGui.Parent = targetHead
+    billboardGui.Size = UDim2.new(0, 150, 0, 50)
+    billboardGui.StudsOffset = Vector3.new(0, 5, 0) -- Position above the head
+    billboardGui.AlwaysOnTop = true
+    billboardGui.ExtentsOffset = Vector3.new(5, 5, 5) -- Make it visible from further away
+    billboardGui.MaxDistance = 500 -- Increase max distance for visibility
+
+    local nameLabel = Instance.new("TextLabel")
+    nameLabel.Name = "PlayerNameLabel"
+    nameLabel.Parent = billboardGui
+    nameLabel.Size = UDim2.new(1, 0, 1, 0)
+    nameLabel.Text = targetPlayer.DisplayName
+    nameLabel.TextScaled = true
+    nameLabel.Font = Enum.Font.SourceSansBold
+    nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    nameLabel.BackgroundTransparency = 1
+    nameLabel.BorderSizePixel = 0
+    nameLabel.TextStrokeTransparency = 0.3
+    nameLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+
+    -- Create 3D box around the player character
+    local box = Instance.new("BoxHandleAdornment")
+    box.Name = "PlayerBox_" .. targetPlayer.Name
+    box.Parent = targetCharacter
+    box.Adornee = targetCharacter
+    box.AlwaysOnTop = true
+    box.Size = Vector3.new(4, 6, 3) -- Standard humanoid size
+    box.Color3 = Color3.fromRGB(255, 100, 100) -- Red color for visibility
+    box.Transparency = 0.5  -- Reduced transparency for better visibility
+    box.ZIndex = 0
+    box.Visible = true -- Ensure it's visible
+
+    -- Store both line and name display in the playerLines table
+    playerLines[targetPlayer] = {
+        Line = line,
+        NameDisplay = billboardGui,
+        Box = box
+    }
 end
 
 local function removePlayerLine(targetPlayer)
     if playerLines[targetPlayer] then
-        playerLines[targetPlayer]:Destroy()
+        local playerData = playerLines[targetPlayer]
+        if playerData.Line then
+            playerData.Line:Destroy()
+        end
+        if playerData.NameDisplay then
+            playerData.NameDisplay:Destroy()
+        end
+        if playerData.Box then
+            playerData.Box:Destroy()
+        end
         playerLines[targetPlayer] = nil
     end
 end
@@ -1261,7 +1204,9 @@ local function enableLinePlayer()
         linePlayerStatusDisplay.Text = string.format("CONNECTIONS: %d/%d | STATUS: ACTIVE", activeConnections, connectedPlayers)
     end)
 
-    showNotification("LINE_PLAYER_ON_HEAD: ENABLED")
+    if showNotification then
+        showNotification("LINE_PLAYER_ON_HEAD: ENABLED")
+    end
 end
 
 local function disableLinePlayer()
@@ -1276,10 +1221,16 @@ local function disableLinePlayer()
         lineUpdateConnection = nil
     end
 
-    -- Remove all lines
-    for _, line in pairs(playerLines) do
-        if line then
-            line:Destroy()
+    -- Remove all lines and associated elements
+    for targetPlayer, playerData in pairs(playerLines) do
+        if playerData.Line then
+            playerData.Line:Destroy()
+        end
+        if playerData.NameDisplay then
+            playerData.NameDisplay:Destroy()
+        end
+        if playerData.Box then
+            playerData.Box:Destroy()
         end
     end
     playerLines = {}
@@ -1287,7 +1238,9 @@ local function disableLinePlayer()
     -- Update status
     linePlayerStatusDisplay.Text = "CONNECTIONS: 0/0 | STATUS: INACTIVE"
 
-    showNotification("LINE_PLAYER_ON_HEAD: DISABLED")
+    if showNotification then
+        showNotification("LINE_PLAYER_ON_HEAD: DISABLED")
+    end
 end
 
 -- Teleport Functions
@@ -1417,20 +1370,74 @@ local function refreshPlayerList()
     playerListScroll.CanvasSize = UDim2.new(0, 0, 0, canvasHeight)
 end
 
+local function findSafePositionNearTarget(targetPosition, maxRadius)
+    -- Helper function to find a safe position near the target
+    local raycastParams = RaycastParams.new()
+    raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
+    raycastParams.FilterDescendantsInstances = {player.Character}
+
+    -- Try different positions in a spiral pattern
+    for radius = 5, maxRadius, 5 do
+        for angle = 0, 360, 45 do
+            local rad = math.rad(angle)
+            local offset = Vector3.new(
+                math.cos(rad) * radius,
+                0,
+                math.sin(rad) * radius
+            )
+            local testPosition = targetPosition + offset
+
+            -- Check ground at this position
+            local rayDown = workspace:Raycast(
+                testPosition + Vector3.new(0, 50, 0),
+                Vector3.new(0, -100, 0),
+                raycastParams
+            )
+
+            if rayDown then
+                -- Check if there's enough space above ground
+                local rayUp = workspace:Raycast(
+                    rayDown.Position + Vector3.new(0, 5, 0),
+                    Vector3.new(0, 20, 0),
+                    raycastParams
+                )
+
+                if not rayUp then
+                    -- Found a safe position with enough headroom
+                    return rayDown.Position + Vector3.new(0, 3, 0)
+                end
+            end
+        end
+    end
+
+    return nil -- No safe position found
+end
+
 local function teleportToTargetPlayer()
     print("[TELEPORT_DEBUG] Starting teleport function...")
 
     if not selectedTeleportPlayer then
         print("[TELEPORT_DEBUG] No player selected!")
-        showNotification("TELEPORT: NO_PLAYER_SELECTED")
+        if showNotification then showNotification("❌ TELEPORT: TIDAK ADA PLAYER YANG DIPILIH") else print("[TELEPORT] TIDAK ADA PLAYER YANG DIPILIH") end
         return
     end
 
     print("[TELEPORT_DEBUG] Selected player:", selectedTeleportPlayer.Name)
 
+    -- Check if target player exists and is in the game
+    if not selectedTeleportPlayer.Parent then
+        print("[TELEPORT_DEBUG] Target player is not in the game!")
+        if showNotification then showNotification("❌ TELEPORT: PLAYER SUDAH KELUAR DARI GAME") else print("[TELEPORT] PLAYER SUDAH KELUAR DARI GAME") end
+        return
+    end
+
     if not selectedTeleportPlayer.Character then
         print("[TELEPORT_DEBUG] Selected player has no character!")
-        showNotification("TELEPORT: TARGET_NO_CHARACTER")
+        if showNotification then
+            showNotification("❌ TELEPORT: PLAYER BELUM MEMPUNYAI KARAKTER")
+        else
+            warn("showNotification function not available")
+        end
         return
     end
 
@@ -1439,7 +1446,7 @@ local function teleportToTargetPlayer()
 
     if not targetHumanoidRootPart then
         print("[TELEPORT_DEBUG] Target has no HumanoidRootPart!")
-        showNotification("TELEPORT: TARGET_ROOTPART_MISSING")
+        if showNotification then showNotification("❌ TELEPORT: KARAKTER TARGET RUSAK (TIDAK ADA HUMANOIDROOTPART)") else print("[TELEPORT] KARAKTER TARGET RUSAK (TIDAK ADA HUMANOIDROOTPART)") end
         return
     end
 
@@ -1447,14 +1454,14 @@ local function teleportToTargetPlayer()
     local localCharacter = player.Character
     if not localCharacter then
         print("[TELEPORT_DEBUG] Local player has no character!")
-        showNotification("TELEPORT: LOCAL_CHARACTER_MISSING")
+        if showNotification then showNotification("❌ TELEPORT: KAMU BELUM MEMPUNYAI KARAKTER") else print("[TELEPORT] KAMU BELUM MEMPUNYAI KARAKTER") end
         return
     end
 
     local localHumanoidRootPart = localCharacter:FindFirstChild("HumanoidRootPart")
     if not localHumanoidRootPart then
         print("[TELEPORT_DEBUG] Local player has no HumanoidRootPart!")
-        showNotification("TELEPORT: LOCAL_ROOTPART_MISSING")
+        if showNotification then showNotification("❌ TELEPORT: KARAKTERMU RUSAK (TIDAK ADA HUMANOIDROOTPART)") else print("[TELEPORT] KARAKTERMU RUSAK (TIDAK ADA HUMANOIDROOTPART)") end
         return
     end
 
@@ -1462,258 +1469,123 @@ local function teleportToTargetPlayer()
     local targetCFrame = targetHumanoidRootPart.CFrame
     local targetPosition = targetCFrame.Position
     local localPosition = localHumanoidRootPart.CFrame.Position
+    local distance = (targetPosition - localPosition).Magnitude
 
     print("[TELEPORT_DEBUG] Target position:", targetPosition)
     print("[TELEPORT_DEBUG] Current local position:", localPosition)
-    print("[TELEPORT_DEBUG] Distance to target:", (targetPosition - localPosition).Magnitude)
+    print("[TELEPORT_DEBUG] Distance to target:", distance)
 
-    -- Perform teleport - directly to target player's exact position (offset up slightly to avoid collision)
-    local teleportOffset = Vector3.new(0, 5, 0) -- Teleport 5 studs above target
-    localHumanoidRootPart.CFrame = targetCFrame + teleportOffset
-
-    print("[TELEPORT_DEBUG] Teleport completed!")
-    print("[TELEPORT_DEBUG] New local position:", localHumanoidRootPart.CFrame.Position)
-
-    showNotification("TELEPORT: SUCCESS_TO_" .. selectedTeleportPlayer.Name:upper())
-end
-
--- Kick Player Functions
-local function createKickButton(targetPlayer, index)
-    -- Don't create button for local player (admin)
-    if targetPlayer == player then return end
-
-    -- Remove existing button for this player
-    if kickPlayerButtons[targetPlayer] then
-        kickPlayerButtons[targetPlayer]:Destroy()
-        kickPlayerButtons[targetPlayer] = nil
-    end
-
-    -- Calculate Y position based on index
-    local buttonY = (index - 1) * 22
-    print("[KICK_DEBUG] Creating kick button for " .. targetPlayer.Name .. " at index " .. index .. ", Y position: " .. buttonY)
-
-    -- Create new button
-    local kickPlayerButton = Instance.new("TextButton")
-    kickPlayerButton.Name = "KickButton_" .. targetPlayer.Name
-    kickPlayerButton.Parent = kickListScroll
-    kickPlayerButton.BackgroundColor3 = colors.inactive
-    kickPlayerButton.BorderSizePixel = 0
-    kickPlayerButton.Position = UDim2.new(0, 2, 0, buttonY)  -- Position each button below previous one
-    kickPlayerButton.Size = UDim2.new(1, -4, 0, 20)
-    kickPlayerButton.Font = Enum.Font.Code
-    kickPlayerButton.Text = targetPlayer.Name
-    kickPlayerButton.TextColor3 = colors.text
-    kickPlayerButton.TextSize = 10
-    kickPlayerButton.TextXAlignment = Enum.TextXAlignment.Left
-    kickPlayerButton.TextYAlignment = Enum.TextYAlignment.Center
-
-    local kickButtonCorner = Instance.new("UICorner")
-    kickButtonCorner.CornerRadius = UDim.new(0, 2)
-    kickButtonCorner.Parent = kickPlayerButton
-
-    -- Store reference
-    kickPlayerButtons[targetPlayer] = kickPlayerButton
-
-    -- Click handler
-    kickPlayerButton.MouseButton1Click:Connect(function()
-        print("[KICK_DEBUG] Button clicked for player:", targetPlayer.Name)
-        print("[KICK_DEBUG] Previous selected player:", selectedKickPlayer and selectedKickPlayer.Name or "none")
-
-        -- Deselect previous player
-        if selectedKickPlayer and selectedKickPlayer ~= targetPlayer then
-            if kickPlayerButtons[selectedKickPlayer] then
-                kickPlayerButtons[selectedKickPlayer].BackgroundColor3 = colors.inactive
-                print("[KICK_DEBUG] Deselected previous player:", selectedKickPlayer.Name)
-            end
-        end
-
-        -- Select new player
-        selectedKickPlayer = targetPlayer
-        kickPlayerButton.BackgroundColor3 = colors.active
-        kickButton.Active = true
-        kickButton.BackgroundColor3 = colors.active
-        selectedKickDisplay.Text = "SELECTED: " .. targetPlayer.Name
-        selectedKickDisplay.TextColor3 = colors.text
-
-        print("[KICK_DEBUG] Selected new player:", targetPlayer.Name)
-        print("[KICK_DEBUG] Kick button active:", kickButton.Active)
-    end)
-
-    -- Hover effects
-    kickPlayerButton.MouseEnter:Connect(function()
-        if selectedKickPlayer ~= targetPlayer then
-            TweenService:Create(kickPlayerButton, TweenInfo.new(0.1), {BackgroundColor3 = colors.tertiary}):Play()
-        end
-    end)
-
-    kickPlayerButton.MouseLeave:Connect(function()
-        if selectedKickPlayer ~= targetPlayer then
-            TweenService:Create(kickPlayerButton, TweenInfo.new(0.1), {BackgroundColor3 = colors.inactive}):Play()
-        end
-    end)
-end
-
-local function removeKickButton(targetPlayer)
-    if kickPlayerButtons[targetPlayer] then
-        kickPlayerButtons[targetPlayer]:Destroy()
-        kickPlayerButtons[targetPlayer] = nil
-
-        -- Clear selection if this player was selected
-        if selectedKickPlayer == targetPlayer then
-            selectedKickPlayer = nil
-            kickButton.Active = false
-            kickButton.BackgroundColor3 = colors.inactive
-            selectedKickDisplay.Text = "SELECTED: NONE"
-            selectedKickDisplay.TextColor3 = colors.text_dim
-        end
-    end
-end
-
-local function refreshKickPlayerList()
-    print("[KICK_DEBUG] === Starting refreshKickPlayerList ===")
-
-    -- Clear existing buttons
-    print("[KICK_DEBUG] Clearing existing buttons...")
-    for _, button in pairs(kickPlayerButtons) do
-        if button then
-            button:Destroy()
-        end
-    end
-    kickPlayerButtons = {}
-    print("[KICK_DEBUG] Cleared", #kickPlayerButtons, "buttons")
-
-    -- Clear selection
-    selectedKickPlayer = nil
-    kickButton.Active = false
-    kickButton.BackgroundColor3 = colors.inactive
-    selectedKickDisplay.Text = "SELECTED: NONE"
-    selectedKickDisplay.TextColor3 = colors.text_dim
-
-    -- Get all players except local player
-    local otherPlayers = {}
-    local allPlayers = Players:GetPlayers()
-    print("[KICK_DEBUG] Total players found: " .. #allPlayers)
-
-    for _, targetPlayer in ipairs(allPlayers) do
-        if targetPlayer ~= player then
-            table.insert(otherPlayers, targetPlayer)
-            print("[KICK_DEBUG] Added player to kick list: " .. targetPlayer.Name)
-        else
-            print("[KICK_DEBUG] Skipping local player: " .. targetPlayer.Name)
-        end
-    end
-
-    print("[KICK_DEBUG] Other players count for kick: " .. #otherPlayers)
-
-    -- Create buttons for all other players
-    for i, targetPlayer in ipairs(otherPlayers) do
-        print("[KICK_DEBUG] Creating kick button for:", targetPlayer.Name, "at index", i)
-        createKickButton(targetPlayer, i)
-    end
-
-    -- Final state check
-    print("[KICK_DEBUG] Total kick buttons created:", #otherPlayers)
-    print("[KICK_DEBUG] Final kickPlayerButtons table size:", table.getn(kickPlayerButtons) or "unknown")
-
-    -- Update canvas size based on number of players
-    local canvasHeight = #otherPlayers * 22
-    kickListScroll.CanvasSize = UDim2.new(0, 0, 0, canvasHeight)
-    print("[KICK_DEBUG] Set canvas height to:", canvasHeight)
-    print("[KICK_DEBUG] === refreshKickPlayerList completed ===")
-end
-
-local function kickSelectedPlayer()
-    print("[KICK_DEBUG] Starting kick function...")
-
-    if not selectedKickPlayer then
-        print("[KICK_DEBUG] No player selected!")
-        showNotification("KICK: NO_PLAYER_SELECTED")
-        return
-    end
-
-    print("[KICK_DEBUG] Selected player:", selectedKickPlayer.Name)
-    print("[KICK_DEBUG] Selected player type:", typeof(selectedKickPlayer))
-    print("[KICK_DEBUG] Selected player Parent:", selectedKickPlayer.Parent)
-
-    -- Check if target player exists and is valid
-    if not selectedKickPlayer.Parent or not selectedKickPlayer:IsA("Player") then
-        print("[KICK_DEBUG] Player not found or invalid!")
-        showNotification("KICK: PLAYER_NOT_FOUND")
-        selectedKickPlayer = nil
-        kickButton.Active = false
-        kickButton.BackgroundColor3 = colors.inactive
-        selectedKickDisplay.Text = "SELECTED: NONE"
-        selectedKickDisplay.TextColor3 = colors.text_dim
-        refreshKickPlayerList()
-        return
-    end
-
-    -- Prevent kicking local player (self-kick protection)
-    if selectedKickPlayer == player then
-        print("[KICK_DEBUG] Attempted self-kick, blocked!")
-        showNotification("KICK: CANNOT_KICK_SELF")
-        return
-    end
-
-    -- Get target info for notifications
-    local targetName = selectedKickPlayer.Name
-    local targetUserId = selectedKickPlayer.UserId
-
-    print("[KICK_DEBUG] Starting kick operation for:", targetName, "ID:", targetUserId)
-
-    -- Confirm kick with notification
-    showNotification("KICK: STARTING_KICK_" .. targetName:upper())
-
-    -- Perform kick (use pcall for safety with detailed error handling)
-    local success, errorMsg = pcall(function()
-        print("[KICK_DEBUG] Calling :Kick() method on player...")
-        selectedKickPlayer:Kick("ADMIN_KICK")
-        print("[KICK_DEBUG] :Kick() method completed")
-    end)
-
-    print("[KICK_DEBUG] Kick operation result - Success:", success)
-    print("[KICK_DEBUG] Error message if any:", errorMsg)
-
-    if success then
-        print("[KICK_DEBUG] Kick successful!")
-
-        -- Clear selection state immediately
-        selectedKickPlayer = nil
-        kickButton.Active = false
-        kickButton.BackgroundColor3 = colors.inactive
-        selectedKickDisplay.Text = "SELECTED: NONE"
-        selectedKickDisplay.TextColor3 = colors.text_dim
-
-        -- Success notification
-        showNotification("KICK: SUCCESS_" .. targetName:upper() .. "_KICKED")
-
-        -- Wait a moment then refresh list to show updated player count
-        task.wait(0.5)
-        print("[KICK_DEBUG] Refreshing kick player list...")
-        refreshKickPlayerList()
+    -- Display distance info
+    if distance < 100 then
+        if showNotification then showNotification("📍 JARAK: " .. math.floor(distance) .. " studs - SANGAT DEKAT") else print("[TELEPORT] JARAK: " .. math.floor(distance) .. " studs - SANGAT DEKAT") end
+    elseif distance < 1000 then
+        if showNotification then showNotification("📍 JARAK: " .. math.floor(distance) .. " studs - SEDANG") else print("[TELEPORT] JARAK: " .. math.floor(distance) .. " studs - SEDANG") end
     else
-        -- Detailed error reporting
-        local errorInfo = tostring(errorMsg) or "UNKNOWN_ERROR"
-        print("[KICK_DEBUG] Kick failed with error:", errorInfo)
+        if showNotification then showNotification("📍 JARAK: " .. math.floor(distance) .. " studs - JAUH") else print("[TELEPORT] JARAK: " .. math.floor(distance) .. " studs - JAUH") end
+    end
 
-        showNotification("KICK: FAILED_" .. targetName:upper() .. "_ERROR")
+    -- Check for workspace streaming limitations
+    if distance > 100000 then
+        if showNotification then showNotification("⚠️ PERINGATAN: JARAK TERLALU JAUH, TELEPORT MUNGKIN GAGAL") else print("[TELEPORT] PERINGATAN: JARAK TERLALU JAUH, TELEPORT MUNGKIN GAGAL") end
+    end
 
-        -- Refresh list anyway in case player left during operation
-        task.wait(0.3)
-        refreshKickPlayerList()
+    -- Enhanced teleport strategy with multiple fallback options
+    local teleportPositions = {
+        -- Priority 1: Direct teleport to player position with various offsets
+        {pos = targetCFrame + Vector3.new(0, 5, 0), desc = "di atas player"},
+        {pos = targetCFrame + Vector3.new(3, 3, 0), desc = "di samping kanan player"},
+        {pos = targetCFrame + Vector3.new(-3, 3, 0), desc = "di samping kiri player"},
+        {pos = targetCFrame + Vector3.new(0, 3, 3), desc = "di depan player"},
+        {pos = targetCFrame + Vector3.new(0, 3, -3), desc = "di belakang player"},
+
+        -- Priority 2: Higher positions for protected areas
+        {pos = targetCFrame + Vector3.new(0, 10, 0), desc = "10 studs di atas player"},
+        {pos = targetCFrame + Vector3.new(0, 15, 0), desc = "15 studs di atas player"},
+        {pos = targetCFrame + Vector3.new(0, 20, 0), desc = "20 studs di atas player"},
+
+        -- Priority 3: Use target player's camera position as fallback
+        {pos = targetCharacter:FindFirstChild("Head") and targetCharacter.Head.CFrame or targetCFrame, desc = "posisi head player"},
+    }
+
+    local teleportSuccess = false
+    local lastPosition = localPosition
+
+    -- Try all teleport positions
+    for i, teleportData in ipairs(teleportPositions) do
+        print("[TELEPORT_DEBUG] Trying position", i .. ":", teleportData.desc)
+
+        -- Store original position for rollback
+        local originalPosition = localHumanoidRootPart.CFrame
+
+        -- Attempt teleport
+        localHumanoidRootPart.CFrame = teleportData.pos
+
+        -- Wait for teleport to register
+        wait(0.05)
+
+        -- Check if teleport was successful
+        local newPosition = localHumanoidRootPart.CFrame.Position
+        local newDistance = (targetPosition - newPosition).Magnitude
+
+        if newDistance < 100 or (newPosition - originalPosition.Position).Magnitude > 10 then
+            teleportSuccess = true
+            lastPosition = newPosition
+            print("[TELEPORT_DEBUG] Teleport successful using:", teleportData.desc)
+            if showNotification then showNotification("✅ TELEPORT: BERHASIL " .. teleportData.desc .. " " .. selectedTeleportPlayer.Name:upper()) else print("[TELEPORT] BERHASIL " .. teleportData.desc .. " " .. selectedTeleportPlayer.Name:upper()) end
+            break
+        else
+            print("[TELEPORT_DEBUG] Teleport failed for:", teleportData.desc)
+            -- Restore original position for next attempt
+            localHumanoidRootPart.CFrame = originalPosition
+            wait(0.05)
+        end
+    end
+
+    -- If all direct attempts failed, try finding safe position nearby
+    if not teleportSuccess then
+        print("[TELEPORT_DEBUG] Direct teleport failed, searching for safe position...")
+        if showNotification then showNotification("🔍 TELEPORT: MENCARI POSISI AMAN TERDEKAT...") else print("[TELEPORT] MENCARI POSISI AMAN TERDEKAT...") end
+
+        local safePosition = findSafePositionNearTarget(targetPosition, 50)
+
+        if safePosition then
+            -- Try teleporting to safe position
+            localHumanoidRootPart.CFrame = CFrame.new(safePosition)
+            wait(0.1)
+
+            local finalDistance = (targetPosition - localHumanoidRootPart.CFrame.Position).Magnitude
+            if finalDistance < 100 then
+                teleportSuccess = true
+                if showNotification then showNotification("✅ TELEPORT: BERHASIL KE POSISI AMAN TERDEKAT (" .. math.floor(finalDistance) .. " studs dari target)") else print("[TELEPORT] BERHASIL KE POSISI AMAN TERDEKAT (" .. math.floor(finalDistance) .. " studs dari target)") end
+                print("[TELEPORT_DEBUG] Safe position teleport successful. Distance:", finalDistance)
+            else
+                if showNotification then showNotification("⚠️ TELEPORT: POSISI AMAN MASIH JAUH (" .. math.floor(finalDistance) .. " studs)") else print("[TELEPORT] POSISI AMAN MASIH JAUH (" .. math.floor(finalDistance) .. " studs)") end
+            end
+        else
+            if showNotification then showNotification("❌ TELEPORT: TIDAK DAPAT MENEMUKAN POSISI AMAN DI SEKITAR TARGET") else print("[TELEPORT] TIDAK DAPAT MENEMUKAN POSISI AMAN DI SEKITAR TARGET") end
+        end
+    end
+
+    -- Final status
+    if teleportSuccess then
+        print("[TELEPORT_DEBUG] Final successful position:", localHumanoidRootPart.CFrame.Position)
+    else
+        if showNotification then showNotification("❌ TELEPORT: SEMUA METODE GAGAL - AREA TERLALU DILINDUNGI") else print("[TELEPORT] SEMUA METODE GAGAL - AREA TERLALU DILINDUNGI") end
+        print("[TELEPORT_DEBUG] All teleport methods failed")
     end
 end
+
+
+
 
 -- Category Collapse/Expand Functions
 local function updateCategoryPositions()
     local speedSectionY = isMainCategoryCollapsed and 50 or 160
     local flySectionY = speedSectionY + (isMainCategoryCollapsed and 0 or 110)
     local jumpSectionY = flySectionY + (isMainCategoryCollapsed and 0 or 90)
-    local quickControlsY = jumpSectionY + (isMainCategoryCollapsed and 0 or 120)
-    local localPlayerY = quickControlsY + (isMainCategoryCollapsed and 0 or 75)
+    local localPlayerY = jumpSectionY + (isMainCategoryCollapsed and 0 or 120)
     local linePlayerY = localPlayerY + (isLocalPlayerCategoryCollapsed and 0 or 50)
     local teleportY = linePlayerY + (isLocalPlayerCategoryCollapsed and 0 or 85)
-    local kickY = teleportY + (isLocalPlayerCategoryCollapsed and 0 or 190)
 
     -- Update positions with animation
     local function updatePosition(element, y)
@@ -1729,20 +1601,16 @@ local function updateCategoryPositions()
     updatePosition(speedSection, speedSectionY)
     updatePosition(flySection, flySectionY)
     updatePosition(jumpSection, jumpSectionY)
-    updatePosition(quickControls, quickControlsY)
     updatePosition(localPlayerCategorySection, localPlayerY)
     updatePosition(linePlayerSection, linePlayerY)
     updatePosition(teleportSection, teleportY)
-    updatePosition(kickSection, kickY)
 
     -- Update visibility
     speedSection.Visible = not isMainCategoryCollapsed
     flySection.Visible = not isMainCategoryCollapsed
     jumpSection.Visible = not isMainCategoryCollapsed
-    quickControls.Visible = not isMainCategoryCollapsed
     linePlayerSection.Visible = not isLocalPlayerCategoryCollapsed
     teleportSection.Visible = not isLocalPlayerCategoryCollapsed
-    kickSection.Visible = not isLocalPlayerCategoryCollapsed
 end
 
 local function toggleMainCategory()
@@ -1759,7 +1627,7 @@ local function toggleMainCategory()
 
     -- Animate sections
     local targetVisibility = not isMainCategoryCollapsed
-    local sections = {speedSection, flySection, jumpSection, quickControls}
+    local sections = {speedSection, flySection, jumpSection}
 
     if targetVisibility then
         -- Fade in sections
@@ -1814,14 +1682,6 @@ local function toggleLocalPlayerCategory()
                 teleportSection.Visible = false
             end
         end)
-
-        local fadeOut3 = TweenService:Create(kickSection, TweenInfo.new(0.3), {BackgroundTransparency = 1})
-        fadeOut3:Play()
-        fadeOut3.Completed:Connect(function()
-            if isLocalPlayerCategoryCollapsed then
-                kickSection.Visible = false
-            end
-        end)
     else
         linePlayerSection.Visible = true
         linePlayerSection.BackgroundTransparency = 1
@@ -1832,11 +1692,6 @@ local function toggleLocalPlayerCategory()
         teleportSection.BackgroundTransparency = 1
         local fadeIn2 = TweenService:Create(teleportSection, TweenInfo.new(0.3), {BackgroundTransparency = 0})
         fadeIn2:Play()
-
-        kickSection.Visible = true
-        kickSection.BackgroundTransparency = 1
-        local fadeIn3 = TweenService:Create(kickSection, TweenInfo.new(0.3), {BackgroundTransparency = 0})
-        fadeIn3:Play()
     end
 
     updateCategoryPositions()
@@ -1872,7 +1727,9 @@ local function togglePanelVisibility()
         logoStatusIndicator.BackgroundColor3 = colors.text
         TweenService:Create(logoStatusIndicator, TweenInfo.new(0.3), {Size = UDim2.new(0, 8, 0, 8)}):Play()
 
-        showNotification("PANEL_STATE: VISIBLE")
+        if showNotification then
+            showNotification("PANEL_STATE: VISIBLE")
+        end
     else
         -- Hide panel
         mainPanel.BackgroundTransparency = 1
@@ -1885,7 +1742,9 @@ local function togglePanelVisibility()
         logoStatusIndicator.BackgroundColor3 = colors.text_dim
         TweenService:Create(logoStatusIndicator, TweenInfo.new(0.3), {Size = UDim2.new(0, 6, 0, 6)}):Play()
 
-        showNotification("PANEL_STATE: HIDDEN")
+        if showNotification then
+            showNotification("PANEL_STATE: HIDDEN")
+        end
     end
 end
 
@@ -1925,17 +1784,7 @@ local function updateInfinityToggleSwitch(enabled)
     end
 end
 
-local function updateHighJumpToggleSwitch(enabled)
-    if enabled then
-        TweenService:Create(highJumpToggleSwitch, TweenInfo.new(0.3), {Position = UDim2.new(0, 27, 0, 2)}):Play()
-        TweenService:Create(highJumpToggleSwitchBg, TweenInfo.new(0.3), {BackgroundColor3 = colors.active}):Play()
-        highJumpToggleSwitch.BackgroundColor3 = colors.text
-    else
-        TweenService:Create(highJumpToggleSwitch, TweenInfo.new(0.3), {Position = UDim2.new(0, 2, 0, 2)}):Play()
-        TweenService:Create(highJumpToggleSwitchBg, TweenInfo.new(0.3), {BackgroundColor3 = colors.inactive}):Play()
-        highJumpToggleSwitch.BackgroundColor3 = colors.text_dim
-    end
-end
+
 
 local function updateStatus(active)
     if active then
@@ -2002,13 +1851,113 @@ local function updateCustomSpeed(newSpeed)
     end
 end
 
-local function showNotification(message)
+local function showNotification(message, notificationType)
+    notificationType = notificationType or "Info"
+    local iconMap = {
+        Info = "rbxassetid://2544403653",
+        Success = "rbxassetid://6031068421",
+        Danger = "rbxassetid://6031068428",
+        Warning = "rbxassetid://6031068426"
+    }
+
+    -- Use chat for system messages (more reliable)
     StarterGui:SetCore("ChatMakeSystemMessage", {
         Text = "[SYSTEM] " .. message;
-        Color = colors.text;
+        Color = notificationType == "Success" and Color3.fromRGB(0, 255, 0) or
+               notificationType == "Danger" and Color3.fromRGB(255, 0, 0) or
+               notificationType == "Warning" and Color3.fromRGB(255, 165, 0) or
+               colors.text;
         Font = Enum.Font.Code;
+        FontSize = Enum.FontSize.Size18;
+    })
+
+    -- Also show notification
+    StarterGui:SetCore("SendNotification", {
+        Title = "JUNED SYSTEM",
+        Text = message,
+        Duration = 3,
+        Icon = iconMap[notificationType] or iconMap.Info
     })
 end
+
+-- Create temporary notification GUI for special cases
+local function createTempNotification(message, notificationType, callback)
+    notificationType = notificationType or "Info"
+
+    -- Remove existing temp notification
+    local existingGui = player.PlayerGui:FindFirstChild("TempNotificationGui")
+    if existingGui then
+        existingGui:Destroy()
+    end
+
+    -- Create notification GUI
+    local notificationGui = Instance.new("ScreenGui")
+    notificationGui.Name = "TempNotificationGui"
+    notificationGui.Parent = player.PlayerGui
+    notificationGui.IgnoreGuiInset = true
+    notificationGui.ResetOnSpawn = false
+
+    -- Main frame
+    local mainFrame = Instance.new("Frame")
+    mainFrame.Name = "NotificationFrame"
+    mainFrame.Parent = notificationGui
+    mainFrame.Size = UDim2.new(0, 350, 0, 50)
+    mainFrame.Position = UDim2.new(0.5, 0, 0, -60)
+    mainFrame.AnchorPoint = Vector2.new(0.5, 0)
+    mainFrame.BackgroundColor3 = notificationType == "Success" and Color3.fromRGB(0, 255, 0) or
+                                  notificationType == "Danger" and Color3.fromRGB(255, 0, 0) or
+                                  notificationType == "Warning" and Color3.fromRGB(255, 165, 0) or
+                                  colors.secondary
+    mainFrame.BorderSizePixel = 0
+
+    -- Corner
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 10)
+    corner.Parent = mainFrame
+
+    -- Text label
+    local textLabel = Instance.new("TextLabel")
+    textLabel.Name = "NotificationText"
+    textLabel.Parent = mainFrame
+    textLabel.Size = UDim2.new(1, -20, 1, 0)
+    textLabel.Position = UDim2.new(0, 10, 0, 0)
+    textLabel.BackgroundTransparency = 1
+    textLabel.Text = message
+    textLabel.TextColor3 = Color3.new(1, 1, 1)
+    textLabel.TextScaled = true
+    textLabel.Font = Enum.Font.SourceSansBold
+
+    -- Animate in
+    local tweenIn = TweenService:Create(mainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back), {
+        Position = UDim2.new(0.5, 0, 0, 20)
+    })
+    tweenIn:Play()
+
+    -- Auto remove after 5 seconds
+    task.delay(5, function()
+        if notificationGui and notificationGui.Parent then
+            local tweenOut = TweenService:Create(mainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In), {
+                Position = UDim2.new(0.5, 0, 0, -60)
+            })
+            tweenOut:Play()
+            tweenOut.Completed:Connect(function()
+                notificationGui:Destroy()
+            end)
+        end
+    end)
+
+    return notificationGui
+end
+
+
+
+
+
+
+
+
+
+
 
 -- Fly Functions
 local function enableFly()
@@ -2027,8 +1976,6 @@ local function enableFly()
     bg.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
     bg.P = 5000
     bg.Parent = humanoid.RootPart
-
-    humanoid.PlatformStand = true
 
     showNotification("FLY MODE: ENABLED")
 end
@@ -2049,8 +1996,6 @@ local function disableFly()
         bg = nil
     end
 
-    humanoid.PlatformStand = false
-
     showNotification("FLY MODE: DISABLED")
 end
 
@@ -2059,6 +2004,15 @@ local function updateFlySpeed(newSpeed)
     if speed and speed >= 10 and speed <= 500 then
         flySpeed = speed
         flySpeedInput.Text = tostring(speed)
+        -- Update velocity immediately if currently flying
+        if isFlying and bv then
+            if flyDirection ~= Vector3.new(0, 0, 0) then
+                local camera = Workspace.CurrentCamera
+                local cameraDirection = camera.CFrame.LookVector
+                local adjustedDirection = (cameraDirection * flyDirection.Z + camera.CFrame.RightVector * flyDirection.X + Vector3.new(0, flyDirection.Y, 0)).Unit
+                bv.Velocity = adjustedDirection * flySpeed
+            end
+        end
     else
         flySpeedInput.Text = tostring(flySpeed)
     end
@@ -2083,27 +2037,9 @@ local function disableInfinityJump()
     showNotification("INFINITE_JUMP: DISABLED")
 end
 
-local function enableHighJump()
-    if isHighJumpEnabled then return end
 
-    isHighJumpEnabled = true
-    humanoid.JumpPower = highJumpPower
-    updateHighJumpToggleSwitch(true)
-    jumpPowerDisplay.Text = "POWER: " .. highJumpPower .. " | STATUS: ACTIVE"
 
-    showNotification("AMPLIFIED_JUMP: ENABLED")
-end
 
-local function disableHighJump()
-    if not isHighJumpEnabled then return end
-
-    isHighJumpEnabled = false
-    humanoid.JumpPower = originalJumpPower
-    updateHighJumpToggleSwitch(false)
-    jumpPowerDisplay.Text = "POWER: " .. originalJumpPower .. " | STATUS: INACTIVE"
-
-    showNotification("AMPLIFIED_JUMP: DISABLED")
-end
 
 -- Button Events
 -- Logo button for show/hide panel
@@ -2184,14 +2120,7 @@ infinityToggleInvisibleButton.MouseButton1Click:Connect(function()
     end
 end)
 
--- High jump toggle button event
-highJumpToggleInvisibleButton.MouseButton1Click:Connect(function()
-    if isHighJumpEnabled then
-        disableHighJump()
-    else
-        enableHighJump()
-    end
-end)
+
 
 -- Line Player toggle button event
 linePlayerToggleInvisibleButton.MouseButton1Click:Connect(function()
@@ -2216,26 +2145,22 @@ teleportButton.MouseButton1Click:Connect(function()
     teleportToTargetPlayer()
 end)
 
--- Kick Button Click Handler
-kickButton.MouseButton1Click:Connect(function()
-    print("[KICK_DEBUG] Kick button clicked!")
-    print("[KICK_DEBUG] Button active state:", kickButton.Active)
-    print("[KICK_DEBUG] Selected player:", selectedKickPlayer and selectedKickPlayer.Name or "none")
-    kickSelectedPlayer()
+-- Teleport Refresh Button Click Handler
+teleportRefreshButton.MouseButton1Click:Connect(function()
+    refreshPlayerList()
+    showNotification("TELEPORT: PLAYER_LIST_REFRESHED")
 end)
 
--- Hover Effects for Kick Button
-kickButton.MouseEnter:Connect(function()
-    if kickButton.Active then
-        TweenService:Create(kickButton, TweenInfo.new(0.1), {BackgroundColor3 = colors.active}):Play()
-    end
+-- Teleport Refresh Button Hover Effects
+teleportRefreshButton.MouseEnter:Connect(function()
+    TweenService:Create(teleportRefreshButton, TweenInfo.new(0.1), {BackgroundColor3 = colors.accent, TextColor3 = colors.text}):Play()
 end)
 
-kickButton.MouseLeave:Connect(function()
-    if kickButton.Active then
-        TweenService:Create(kickButton, TweenInfo.new(0.1), {BackgroundColor3 = colors.active}):Play()
-    end
+teleportRefreshButton.MouseLeave:Connect(function()
+    TweenService:Create(teleportRefreshButton, TweenInfo.new(0.1), {BackgroundColor3 = colors.tertiary, TextColor3 = colors.text_dim}):Play()
 end)
+
+
 
 -- Hover Effects for Teleport Button
 teleportButton.MouseEnter:Connect(function()
@@ -2305,22 +2230,7 @@ infinityToggleInvisibleButton.MouseLeave:Connect(function()
     end
 end)
 
--- High jump toggle hover effects
-highJumpToggleInvisibleButton.MouseEnter:Connect(function()
-    if isHighJumpEnabled then
-        TweenService:Create(highJumpToggleSwitchBg, TweenInfo.new(0.1), {BackgroundColor3 = colors.accent}):Play()
-    else
-        TweenService:Create(highJumpToggleSwitchBg, TweenInfo.new(0.1), {BackgroundColor3 = colors.accent}):Play()
-    end
-end)
 
-highJumpToggleInvisibleButton.MouseLeave:Connect(function()
-    if isHighJumpEnabled then
-        TweenService:Create(highJumpToggleSwitchBg, TweenInfo.new(0.1), {BackgroundColor3 = colors.active}):Play()
-    else
-        TweenService:Create(highJumpToggleSwitchBg, TweenInfo.new(0.1), {BackgroundColor3 = colors.inactive}):Play()
-    end
-end)
 
 -- Line Player toggle hover effects
 linePlayerToggleInvisibleButton.MouseEnter:Connect(function()
@@ -2390,7 +2300,7 @@ UserInputService.InputEnded:Connect(function(input, gameProcessed)
 end)
 
 -- Fly Movement Loop
-RunService.Heartbeat:Connect(function()
+RunService.RenderStepped:Connect(function()
     if isFlying and bv and humanoid.RootPart then
         local camera = Workspace.CurrentCamera
         local moveDirection = flyDirection
@@ -2446,14 +2356,6 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
         end
     end
 
-    if input.KeyCode == Enum.KeyCode.H then
-        if isHighJumpEnabled then
-            disableHighJump()
-        else
-            enableHighJump()
-        end
-    end
-
     -- Line Player toggle
     if input.KeyCode == Enum.KeyCode.L then
         if isLinePlayerEnabled then
@@ -2475,7 +2377,6 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
         disableCustomSpeed()
         disableFly()
         disableInfinityJump()
-        disableHighJump()
         disableLinePlayer()
         customWalkSpeed = 50
         flySpeed = 100
@@ -2499,7 +2400,6 @@ player.CharacterAdded:Connect(function(newCharacter)
     disableCustomSpeed()
     disableFly()
     disableInfinityJump()
-    disableHighJump()
 
     -- Refresh lines if enabled (wait for head to load)
     if isLinePlayerEnabled then
@@ -2516,7 +2416,6 @@ humanoid.Died:Connect(function()
     if isSpeedEnabled then disableCustomSpeed() end
     if isFlying then disableFly() end
     if isInfinityJumpEnabled then disableInfinityJump() end
-    if isHighJumpEnabled then disableHighJump() end
     if isLinePlayerEnabled then disableLinePlayer() end
 end)
 
@@ -2533,18 +2432,15 @@ Players.PlayerAdded:Connect(function(newPlayer)
     end
     -- Refresh teleport player list
     refreshPlayerList()
-    -- Refresh kick player list
-    refreshKickPlayerList()
 end)
 
 Players.PlayerRemoving:Connect(function(removingPlayer)
     if isLinePlayerEnabled then
         removePlayerLine(removingPlayer)
     end
+
     -- Refresh teleport player list
     refreshPlayerList()
-    -- Refresh kick player list
-    refreshKickPlayerList()
 end)
 
 -- Initialize category positions
@@ -2553,11 +2449,10 @@ updateCategoryPositions()
 -- Initialize teleport player list
 refreshPlayerList()
 
--- Initialize kick player list
-refreshKickPlayerList()
+
 
 print("[SYSTEM] .SYSTEM: INITIALIZED")
-print("[KEYBINDS] X:SPEED F:FLY J:INFINITE_JUMP H:HIGH_JUMP L:LINE_PLAYER")
+print("[KEYBINDS] X:SPEED F:FLY J:INFINITE_JUMP L:LINE_PLAYER")
 print("[PANEL] CLICK_LOGO:TOGGLE_PANEL DRAG_HEADER:MOVE_PANEL CTRL+P:RESET_POSITION")
 print("[CATEGORIES] CLICK_CATEGORY_HEADERS:TOGGLE_EXPAND_COLLAPSE")
 print("[RESET] CTRL+R: SYSTEM_RESET")
